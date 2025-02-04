@@ -1,0 +1,21 @@
+{
+    "name": "veerenjp/laravel-rest-api-v2",
+    "description": "Powerful RestAPI plugin for Laravel framework",
+    "type": "library",
+    "require": {
+        "laravel/framework": "5.6.*|5.7.*|5.8.*|6.*|7.*|8.*|9.*|10.*|^11.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "veerenjp\\RestAPI\\": "src",
+            "veerenjp\\RestAPI\\Tests\\": "tests"
+        }
+    },
+    "authors": [
+        {
+            "name": "Veerendra J",
+            "email": "veeren@gmail.com"
+        }
+    ]
+}
