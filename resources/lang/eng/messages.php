@@ -558,4 +558,6 @@ return array(
     'SelectaDepartment' => 'Select a current department.',
     'changeWeeklyTimesheetStatusConfirmation' => 'Are you sure you want to change the status of this weekly timesheet?',
     'submitWeeklyTimesheetConfirmation' => 'Are you sure you want to submit this weekly timesheet? You will not be able to edit it later.',
+    'saveWeeklyTimesheetConfirmation' => 'Do you want to save this timesheet as a draft? You can edit it later.',
+
 );
