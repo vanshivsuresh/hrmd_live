@@ -1,0 +1,43 @@
+name: Push-to-EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to EC2 on master branch push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the files
+        uses: actions/checkout@v2
+
+      - name: Deploy to Server 1
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: ${{ secrets.TARGET_DIR }}
+
+      - name: Executing remote SSH commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo sed -i 's|http://ap-south-1.ec2.archive.***.com/***|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+            sudo apt-get update --fix-missing
+            sudo apt-get install -y apache2 --fix-missing
+            sudo mkdir -p /var/www/html
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
+            # Sync files instead of moving them
+            sudo rsync -av --delete ~/home/ /var/www/html/
+            # Set correct permissions for Apache
+            sudo chown -R www-data:www-data /var/www/html
+            sudo chmod -R 755 /var/www/html
+            sudo systemctl restart apache2
