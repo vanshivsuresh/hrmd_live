@@ -1,3 +1,4 @@
+
 name: Push-to-EC2
 
 on:
@@ -23,21 +24,11 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            TARGET_DIR="/var/www/hrmdaddy"
-            echo "Setting up target directory: $TARGET_DIR"
-            sudo mkdir -p $TARGET_DIR
-            echo "Changing ownership of $TARGET_DIR to $USER"
-            sudo chown -R $USER:$USER $TARGET_DIR
-            echo "Setting permissions for $TARGET_DIR"
-            sudo chmod -R 775 $TARGET_DIR
-            cd $TARGET_DIR
-            echo "Current directory: $(pwd)"
+            mkdir -p ~/hrmdaddy
+            cd ~/hrmdaddy
             if [ ! -d .git ]; then
-              echo "Cloning repository into $TARGET_DIR"
               git clone https://github.com/your-repo/hrmdaddy.git .
             fi
-            echo "Resetting and pulling latest changes"
             git reset --hard origin/main
             git pull origin main
-            echo "Restarting Apache"
             sudo systemctl restart apache2
