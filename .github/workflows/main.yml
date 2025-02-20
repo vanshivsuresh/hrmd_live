@@ -57,18 +57,20 @@ jobs:
 
             # Set correct Laravel permissions
             echo "Setting correct Laravel permissions..."
-            sudo chown -R www-data:www-data storage bootstrap/cache
             sudo chmod -R 775 storage bootstrap/cache
-            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
+            sudo chmod -R 777 storage bootstrap/cache
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chown -R ubuntu:ubuntu storage bootstrap/cache
 
             # Run Laravel migrations (optional)
             php artisan migrate --force
 
-            # Clear caches to reflect changes
-            php artisan config:clear
+            # Clear and cache Laravel configurations
             php artisan cache:clear
+            php artisan config:clear
+            php artisan config:cache
+            php artisan route:cache
             php artisan view:clear
-            php artisan route:clear
 
             # Restart Apache to apply changes
             sudo systemctl reload apache2
