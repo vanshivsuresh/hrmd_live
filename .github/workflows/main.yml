@@ -14,15 +14,7 @@ jobs:
       - name: Checkout the files
         uses: actions/checkout@v2
 
-      - name: Deploy to Server 1
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.HOST_DNS }}
-          REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ${{ secrets.TARGET_DIR }}
-
-      - name: Executing remote SSH commands using ssh key
+      - name: Deploy to EC2 using SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST_DNS }}
@@ -30,9 +22,26 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /var/www/html
-            git pull origin main || echo "Git repo not found, using rsync..."
-            sudo rsync -az --ignore-existing --checksum --exclude='node_modules' --exclude='.git' ~/home/ /var/www/html/
-            sudo chown -R www-data:www-data /var/www/html
-            sudo chmod -R 755 /var/www/html
-            sudo systemctl restart apache2
+            
+            # Pull latest changes if repo exists, else clone it
+            if [ -d ".git" ]; then
+              git reset --hard origin/main
+              git pull origin main
+            else
+              git clone --depth 1 --branch main git@github.com:your-repo.git /var/www/html
+            fi
+            
+            # Install dependencies only if package.json has changed
+            if [ -f package.json ]; then
+              if [ "$(git diff --name-only HEAD@{1} package.json)" ]; then
+                npm install --production
+              fi
+            fi
 
+            # Set correct permissions (only if needed)
+            sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
+            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
+            sudo chown -R www-data:www-data storage bootstrap/cache
+
+            # Restart Apache only if needed
+            sudo systemctl reload apache2
