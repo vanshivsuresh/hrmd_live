@@ -24,5 +24,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/hrmdaddy
+            git reset --hard origin/main  # Ensures files stay within hrmdaddy
             git pull origin main
             sudo systemctl restart apache2
