@@ -41,6 +41,29 @@ class WeeklyTimesheetController extends AccountBaseController
         if (request()->view == 'pending_approval') {
             $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
 
+            // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+
+            if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
+                $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
+                ->join('employee_details', 'employee_details.user_id', 'users.id')
+                ->whereIn('employee_details.reporting_to', [user()->id]);
+            } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
+                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
+            }
+
+            if (request()->id) {
+                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
+            }
+
+            $this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
+
+            return view('weekly-timesheets.pending_approval', $this->data);
+
+        }  if (request()->view == 'pending_approval') {
+            $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
+
+            // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+
             if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
                 $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
                 ->join('employee_details', 'employee_details.user_id', 'users.id')
@@ -127,11 +150,13 @@ class WeeklyTimesheetController extends AccountBaseController
         $hours = $request->hours;
         $memo = $request->memo;
 
+
         $this->validate($request, [
             'task_ids' => 'required'
         ], [], [
             'task_ids' => __('app.task')
         ]);
+
 
         reset($taskIds);
 
@@ -169,6 +194,7 @@ class WeeklyTimesheetController extends AccountBaseController
                     $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
                     $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
                     $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
+                    $timeLog->memo = $memo[$key][$key2];
                     $timeLog->save();
                 }
             }

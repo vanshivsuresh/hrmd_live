@@ -206,11 +206,23 @@
         });
 
         $('.submit-timesheet').click(function (e) {
-            $('#status').val($(this).data('status'));
+            // $('#status').val($(this).data('status'));
+            // new code
+            var status = $(this).data('status');
+            var confirmationMessage = '';
+
+            if (status === 'draft') {
+                confirmationMessage = "{{ __('messages.saveWeeklyTimesheetConfirmation') }}";
+            } else if (status === 'pending') {
+                confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
+            }
+            $('#status').val(status);
+            // end new code
 
             Swal.fire({
                 title: "@lang('messages.sweetAlertTitle')",
-                text: "@lang('messages.submitWeeklyTimesheetConfirmation')",
+                // text: "@lang('messages.submitWeeklyTimesheetConfirmation')",
+                text: confirmationMessage,
                 icon: 'warning',
                 showCancelButton: true,
                 focusConfirm: false,

@@ -320,6 +320,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                 else {
                     $employeedata[$employee_index]['dates'][$emp_attendance] = [
                         'total_hours' => $diff_in_hours,
+                        // 'total_hours' => "present",
                         'date' => $attendance->date,
                         'comments' => [
                             'status' => $status,
@@ -342,6 +343,8 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         return $employeedata;
     }
 
+
+    // new code
     public function map($employeedata): array
     {
         $data = array();
@@ -349,19 +352,45 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         $num = isset($employeedata['dates']) ? count($employeedata['dates']) : 0;
 
         for ($index = 1; $index <= $num; $index++) {
-
             $emp_status = $employeedata['dates'][$index]['comments']['status'];
 
-            if (str_contains($emp_status, 'Holiday') || $employeedata['dates'][$index]['total_hours'] < 1) {
+            // Check if the employee is present
+            if (str_contains($emp_status, 'Present')) {
+                $data[] = 'Present'; // Display "Present" instead of total hours
+            } else if (str_contains($emp_status, 'Holiday') || $employeedata['dates'][$index]['total_hours'] < 1) {
                 $data[] = $employeedata['dates'][$index]['comments']['status'];
-            }
-            else {
+            } else {
                 $data[] = CarbonInterval::formatHuman($employeedata['dates'][$index]['total_hours']);
             }
         }
 
         return $data;
-    }
+    } 
+    // end new code
+
+
+    
+
+    // public function map($employeedata): array
+    // {
+    //     $data = array();
+    //     $data[] = $employeedata['employee_name'];
+    //     $num = isset($employeedata['dates']) ? count($employeedata['dates']) : 0;
+
+    //     for ($index = 1; $index <= $num; $index++) {
+
+    //         $emp_status = $employeedata['dates'][$index]['comments']['status'];
+
+    //         if (str_contains($emp_status, 'Holiday') || $employeedata['dates'][$index]['total_hours'] < 1) {
+    //             $data[] = $employeedata['dates'][$index]['comments']['status'];
+    //         }
+    //         else {
+    //             $data[] = CarbonInterval::formatHuman($employeedata['dates'][$index]['total_hours']);
+    //         }
+    //     }
+
+    //     return $data;
+    // }
 
     public function checkHolidays($attendances, $date)
     {

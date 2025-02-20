@@ -67,7 +67,8 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
             ),
             DB::raw(
                 "(SELECT Count(leaves.id) FROM leaves WHERE leaves.user_id = users.id and leaves.status = 'approved' and DATE(leaves.leave_date) >= '" . $startDate . "' and DATE(leaves.leave_date) <= '" . $endDate . "' GROUP BY leaves.user_id) as total_leaves"
-            )
+            ),
+
         );
 
         if (!is_null($employee) && $employee !== 'all') {
@@ -202,6 +203,60 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
             }
         ];
     }
+
+
+    // new code
+    /*public function registerEvents(): array
+        {
+            return [
+                AfterSheet::class => function (AfterSheet $event) {
+                    $sheet = $event->sheet->getDelegate();
+                    $row = 4; // Start from row 4 as per your existing code
+
+                    foreach ($this->employees as $index => $employee) {
+                        // Prepare the holiday and task memo data
+                        $holidays = $employee->holidays;
+                        $taskMemos = []; // Store task-specific memos here
+
+                        // If holidays exist, format the holiday note
+                        if ($holidays->isNotEmpty()) {
+                            $holidayComments = $holidays->map(function ($holiday) {
+                                $occasion = $holiday->occassion;
+                                $date = Carbon::parse($holiday->date)->format('d/m/Y');
+                                return __('modules.holiday.occasion') . ": {$occasion} (" . __('modules.holiday.date') . " - {$date})";
+                            })->toArray();
+
+                            $holidayComment = implode(', ', $holidayComments);
+                            $taskMemos[] = "Holiday: " . $holidayComment;
+                        }
+
+                        // Fetch the task memo for the current employee from the project_time_logs table
+                        $taskMemo = DB::table('project_time_logs')
+                            ->where('user_id', $employee->id)
+                            ->whereBetween('start_time', [$this->startDate, $this->endDate])
+                            ->pluck('memo') // Assuming the memo field is named 'memo'
+                            ->first(); // Get the first task memo for this employee within the date range
+
+                        if ($taskMemo) {
+                            $taskMemos[] = "Task: {$taskMemo}";
+                        }
+
+                        // Combine all memos for the employee
+                        $memo = implode("\n", $taskMemos);
+
+                        // Get the cell reference for task memo (adjusting for the employee row)
+                        $memoCell = 'G' . ($row + $index); // Assuming "G" is the new column for Task Memo
+                        $sheet->setCellValue($memoCell, $memo);
+
+                        // Optionally, add comments to the cell as well
+                        $sheet->getComment($memoCell)->getText()->createTextRun($memo);
+                    }
+                }
+            ];
+        }**/
+
+    // end code
+
 
     private function countTotalDays($startDate, $endDate)
     {

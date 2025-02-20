@@ -1,0 +1,35 @@
+name: Laravel Auto Deploy to AWS
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Deploy to AWS Server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            cd /var/www/hrmdaddy
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa" git pull origin staging
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            sudo systemctl restart apache2
