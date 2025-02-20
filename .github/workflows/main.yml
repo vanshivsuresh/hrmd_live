@@ -7,66 +7,22 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to EC2 on main branch push
+    name: Deploy to EC2
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the files
+      - name: Checkout the latest commit
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
 
-      - name: Deploy to EC2 using SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST_DNS }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Define deployment directory
-            TARGET_DIR="/var/www/hrmdaddy"
-            echo "Deploying to $TARGET_DIR"
-            
-            # Navigate to the existing directory
-            cd $TARGET_DIR
-            
-            # Ensure correct permissions before pulling
-            sudo chown -R ubuntu:ubuntu $TARGET_DIR
-            sudo chmod -R 755 $TARGET_DIR
-
-            # Pull latest changes if repo exists, else initialize git
-            if [ -d ".git" ]; then
-              echo "Git repository found. Pulling latest changes..."
-              git reset --hard origin/main
-              git pull origin main
-            else
-              echo "No repository found! Initializing repository..."
-              git init
-              git remote add origin git@github.com:your-repo.git
-              git fetch origin
-              git checkout -t origin/main
-            fi
-
-            # Install dependencies if package.json changed
-            if [ -f package-lock.json ]; then
-              echo "package-lock.json found. Running npm install..."
-              npm ci
-            else
-              echo "No package-lock.json found. Running npm install..."
-              npm install --production
-            fi
-
-            # Set correct Laravel permissions
-            sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
-            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
-            sudo chown -R www-data:www-data storage bootstrap/cache storage/logs
-
-            # Run Laravel migrations
-            php artisan migrate --force
-
-            # Clear caches to reflect changes
-            php artisan config:clear
-            php artisan cache:clear
-            php artisan view:clear
-            php artisan route:clear
-
-            # Restart Apache to apply changes
+            cd ~/hrmdaddy
+            git pull origin main
             sudo systemctl restart apache2
