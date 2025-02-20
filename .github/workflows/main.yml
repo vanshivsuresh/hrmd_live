@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout the files
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Ensure full commit history
 
       - name: Deploy to EC2 using SSH
         uses: appleboy/ssh-action@master
@@ -21,56 +23,39 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Define deployment directory
             TARGET_DIR="/var/www/hrmdaddy"
             echo "Deploying to $TARGET_DIR"
-
-            # Navigate to the existing directory
             cd $TARGET_DIR
+            
+            # Ensure correct branch
+            git fetch origin
+            git checkout main || git checkout -b main origin/main
+            git reset --hard origin/main
+            git clean -fd
+            git pull origin main
 
-            # Ensure correct permissions before pulling
-            sudo chown -R $USER:$USER $TARGET_DIR
-            sudo chmod -R 755 $TARGET_DIR
-
-            # Pull latest changes if repo exists, else initialize git
-            if [ -d ".git" ]; then
-              echo "Git repository found. Pulling latest changes..."
-              git reset --hard origin/main
-              git pull origin main
+            # Install dependencies if package.json changes
+            if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
+              echo "package.json changed, installing dependencies..."
+              npm install --production
             else
-              echo "No repository found! Initializing repository..."
-              git init
-              git remote add origin git@github.com:your-repo.git
-              git fetch origin
-              git checkout -t origin/main
+              echo "No changes in package.json, skipping npm install."
             fi
-
-            # Install dependencies only if package.json has changed
-            if [ -f package.json ]; then
-              if git diff --quiet HEAD@{1} HEAD -- package.json; then
-                echo "package.json changed, installing dependencies..."
-                npm install --production
-              else
-                echo "No changes in package.json, skipping npm install."
-              fi
-            fi
-
+            
             # Set correct Laravel permissions
-            echo "Setting correct Laravel permissions..."
+            sudo chown -R www-data:www-data $TARGET_DIR
             sudo chmod -R 775 storage bootstrap/cache
-            sudo chmod -R 777 storage bootstrap/cache
-            sudo chown -R www-data:www-data storage bootstrap/cache
-            sudo chown -R ubuntu:ubuntu storage bootstrap/cache
-
-            # Run Laravel migrations (optional)
+            
+            # Run Laravel migrations
             php artisan migrate --force
-
-            # Clear and cache Laravel configurations
+            
+            # Clear caches
             php artisan cache:clear
             php artisan config:clear
             php artisan config:cache
             php artisan route:cache
             php artisan view:clear
-
-            # Restart Apache to apply changes
+            php artisan optimize:clear  # NEW: Ensures Laravel reloads everything
+            
+            # Restart Apache
             sudo systemctl reload apache2
