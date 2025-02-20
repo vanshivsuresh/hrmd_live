@@ -371,7 +371,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     
 
-    // public function map($employeedata): array
+    // public function map($employeedata): array==>suresh
     // {
     //     $data = array();
     //     $data[] = $employeedata['employee_name'];
