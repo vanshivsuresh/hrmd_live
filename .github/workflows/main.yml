@@ -21,29 +21,53 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            TARGET_DIR=${{ secrets.TARGET_DIR }}
+            # Define deployment directory
+            TARGET_DIR="/var/www/hrmdaddy"
+            echo "Deploying to $TARGET_DIR"
+
+            # Navigate to the existing directory
             cd $TARGET_DIR
 
-            # Pull latest changes if repo exists, else clone it
+            # Ensure correct permissions before pulling
+            sudo chown -R $USER:$USER $TARGET_DIR
+            sudo chmod -R 755 $TARGET_DIR
+
+            # Pull latest changes if repo exists, else initialize git
             if [ -d ".git" ]; then
+              echo "Git repository found. Pulling latest changes..."
               git reset --hard origin/main
               git pull origin main
             else
-              git clone --depth 1 --branch main git@github.com:your-repo.git $TARGET_DIR
-              cd $TARGET_DIR
+              echo "No repository found! Initializing repository..."
+              git init
+              git remote add origin git@github.com:your-repo.git
+              git fetch origin
+              git checkout -t origin/main
             fi
-            
+
             # Install dependencies only if package.json has changed
             if [ -f package.json ]; then
-              if [ "$(git diff --name-only HEAD@{1} package.json)" ]; then
+              if git diff --quiet HEAD@{1} HEAD -- package.json; then
+                echo "package.json changed, installing dependencies..."
                 npm install --production
+              else
+                echo "No changes in package.json, skipping npm install."
               fi
             fi
 
-            # Set correct permissions (only for required directories)
+            # Set correct Laravel permissions
             sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
             sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
             sudo chown -R www-data:www-data storage bootstrap/cache
 
-            # Restart Apache only if needed
+            # Run Laravel migrations (optional)
+            php artisan migrate --force
+
+            # Clear caches to reflect changes
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan view:clear
+            php artisan route:clear
+
+            # Restart Apache to apply changes
             sudo systemctl reload apache2
