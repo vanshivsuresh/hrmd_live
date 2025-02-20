@@ -21,14 +21,16 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /var/www/html
-            
+            TARGET_DIR=${{ secrets.TARGET_DIR }}
+            cd $TARGET_DIR
+
             # Pull latest changes if repo exists, else clone it
             if [ -d ".git" ]; then
               git reset --hard origin/main
               git pull origin main
             else
-              git clone --depth 1 --branch main git@github.com:your-repo.git /var/www/html
+              git clone --depth 1 --branch main git@github.com:your-repo.git $TARGET_DIR
+              cd $TARGET_DIR
             fi
             
             # Install dependencies only if package.json has changed
@@ -38,7 +40,7 @@ jobs:
               fi
             fi
 
-            # Set correct permissions (only if needed)
+            # Set correct permissions (only for required directories)
             sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
             sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
             sudo chown -R www-data:www-data storage bootstrap/cache
