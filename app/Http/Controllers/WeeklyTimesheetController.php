@@ -194,6 +194,7 @@ class WeeklyTimesheetController extends AccountBaseController
                     $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
                     $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
                     $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
+                    // added this below logic to get memo.
                     $timeLog->memo = $memo[$key][$key2];
                     $timeLog->save();
                 }
