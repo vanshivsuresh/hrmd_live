@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to EC2 on master branch push
+    name: Deploy to EC2 on main branch push
     runs-on: ubuntu-latest
 
     steps:
@@ -29,15 +29,10 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo sed -i 's|http://ap-south-1.ec2.archive.***.com/***|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
-            sudo apt-get update --fix-missing
-            sudo apt-get install -y apache2 --fix-missing
-            sudo mkdir -p /var/www/html
-            sudo systemctl start apache2
-            sudo systemctl enable apache2
-            # Sync files instead of moving them
-            sudo rsync -av --delete ~/home/ /var/www/html/
-            # Set correct permissions for Apache
+            cd /var/www/html
+            git pull origin main || echo "Git repo not found, using rsync..."
+            sudo rsync -az --ignore-existing --checksum --exclude='node_modules' --exclude='.git' ~/home/ /var/www/html/
             sudo chown -R www-data:www-data /var/www/html
             sudo chmod -R 755 /var/www/html
             sudo systemctl restart apache2
+
