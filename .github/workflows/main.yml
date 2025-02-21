@@ -22,15 +22,49 @@ jobs:
           host: ${{ secrets.HOST_DNS }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: 'TARGET_DIR'
           script: |
-            TARGET_DIR="/var/www/hrmdaddy"
-            sudo mkdir -p $TARGET_DIR
+            mkdir -p $TARGET_DIR
             cd $TARGET_DIR
-
+            
+            # Clone the repository if it doesn't exist
             if [ ! -d .git ]; then
-              sudo git clone https://github.com/your-repo/hrmdaddy.git .
+              git clone https://github.com/your-repo/hrmdaddy.git .
             fi
 
-            sudo git reset --hard origin/main
-            sudo git pull origin main
+            # Fetch latest changes
+            git reset --hard origin/main
+            git pull origin main
+
+            # Ensure environment variables are set
+            echo "Updating .env file..."
+            cat > .env <<EOF
+            APP_NAME=Laravel
+            APP_ENV=production
+            APP_KEY=${{ secrets.APP_KEY }}
+            APP_DEBUG=false
+            APP_URL=https://hrmdaddy.in
+
+            DB_CONNECTION=mysql
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=3306
+            DB_DATABASE=${{ secrets.DB_DATABASE }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+            CACHE_DRIVER=file
+            SESSION_DRIVER=file
+            QUEUE_CONNECTION=sync
+            EOF
+
+            # Set correct permissions for .env
+            chmod 600 .env
+
+            # Install dependencies
+            composer install --no-dev --optimize-autoloader
+
+            # Run migrations
+            php artisan migrate --force
+
+            # Restart Apache or PHP-FPM
             sudo systemctl restart apache2
