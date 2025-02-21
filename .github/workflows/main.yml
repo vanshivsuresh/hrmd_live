@@ -22,9 +22,10 @@ jobs:
           host: ${{ secrets.HOST_DNS }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: 'TARGET_DIR'  # Pass the TARGET_DIR environment variable
           script: |
-            mkdir -p ~/hrmdaddy
-            cd ~/hrmdaddy
+            mkdir -p $TARGET_DIR
+            cd $TARGET_DIR
             if [ ! -d .git ]; then
               git clone https://github.com/your-repo/hrmdaddy.git .
             fi
