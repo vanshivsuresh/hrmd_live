@@ -24,7 +24,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: 'TARGET_DIR'
           script: |
-            mkdir -p $TARGET_DIR
+            TARGET_DIR="/var/www/hrmdaddy"
+            sudo mkdir -p $TARGET_DIR
             cd $TARGET_DIR
             
             # Clone the repository if it doesn't exist
