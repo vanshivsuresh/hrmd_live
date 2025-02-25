@@ -31,11 +31,15 @@ jobs:
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
             cd /var/www/hrmdaddy/hrmd_live
-            git pull origin main
+            git status
+            git fetch --all
+            git reset --hard origin/main
+            git status
             composer install --no-dev
             php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
+            php artisan view:clear
             php artisan route:cache
             sudo systemctl restart nginx php-fpm
           EOF
