@@ -12,9 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('weekly_timesheet_entries', function (Blueprint $table) {
-            $table->string('memo')->unsigned()->nullable()->after('hours');
+            $table->string('memo')->nullable()->after('hours');
         });
-        
     }
 
     /**
@@ -23,9 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('weekly_timesheet_entries', function (Blueprint $table) {
-            //
+            $table->dropColumn('memo');
         });
     }
-    
-    
 };
