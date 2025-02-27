@@ -30,7 +30,7 @@ jobs:
           HOST: ec2-3-110-207-179.ap-south-1.compute.amazonaws.com
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
-            cd /var/www/hrmdaddy
+            cd /var/www/hrmdaddy/hrmd_live
             git status
             git fetch --all
             git reset --hard origin/main
