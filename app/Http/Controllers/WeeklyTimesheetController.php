@@ -211,7 +211,7 @@ class WeeklyTimesheetController extends AccountBaseController
 
 
 
-    // new code
+    // new code (added a logic to views the memo in timesheet when click on view )
     public function store(Request $request)
         {
             $taskIds = $request->task_ids;
