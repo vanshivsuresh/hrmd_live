@@ -559,5 +559,7 @@ return array(
     'changeWeeklyTimesheetStatusConfirmation' => 'Are you sure you want to change the status of this weekly timesheet?',
     'submitWeeklyTimesheetConfirmation' => 'Are you sure you want to submit this weekly timesheet? You will not be able to edit it later.',
     'saveWeeklyTimesheetConfirmation' => 'Do you want to save this timesheet as a draft? You can edit it later.',
+    'hoursAndMemoRequired' => 'Both hours and memo are required for each entry.',
+    'atLeastOneDayRequired' => 'At least one day must have both hours and memo filled.',
 
 );
