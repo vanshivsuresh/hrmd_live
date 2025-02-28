@@ -27,6 +27,10 @@ jobs:
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            mkdir -p /var/www/hrmdaddy/bootstrap/cache
+            sudo chown -R www-data:www-data /var/www/hrmdaddy
+            sudo chmod -R 775 /var/www/hrmdaddy/storage /var/www/hrmdaddy/bootstrap/cache
+            sudo setfacl -R -m u:www-data:rwx /var/www/hrmdaddy/storage /var/www/hrmdaddy/bootstrap/cache
             cd /var/www/hrmdaddy
             GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa" git pull origin staging
             php artisan config:cache
