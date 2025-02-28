@@ -31,18 +31,27 @@ jobs:
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
             cd /var/www/hrmdaddy/hrmd_live
+            echo "----- Checking Current Branch & Status -----"
+            git branch
             git status
+            echo "----- Fetching Latest Code -----"
             git fetch --all
             git reset --hard origin/main
-            git status
+            git pull origin main
+            echo "----- Verifying Latest Commit -----"
+            git log --oneline -n 5
+            echo "----- Running Composer & Laravel Commands -----"
             composer install --no-dev
             php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
             php artisan view:clear
             php artisan route:cache
+            echo "----- Setting Permissions -----"
             sudo chown -R nginx:nginx storage bootstrap/cache
             sudo chmod -R 775 storage bootstrap/cache
             sudo chmod -R 777 storage bootstrap/cache
+            echo "----- Restarting Services -----"
             sudo systemctl restart nginx php-fpm
+            echo "Deployment Complete!"
           EOF
