@@ -30,22 +30,36 @@ jobs:
           HOST: ec2-52-66-102-73.ap-south-1.compute.amazonaws.com
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
+            # cd /var/www/hrmdaddy/hrmd_live
+            sudo chown -R ec2-user:ec2-user /var/www/hrmdaddy/hrmd_live
+            sudo chmod -R 755 /var/www/hrmdaddy/hrmd_live
+      
+            # Navigate to the project directory
             cd /var/www/hrmdaddy/hrmd_live
+      
+            # Pull the latest changes
             git fetch --all
             git reset --hard origin/main
-            git clean -fd              
-            git pull origin main 
+            git clean -fd
+            git pull origin main
+      
+            # Install Composer dependencies
             composer install --no-dev
+      
+            # Run Laravel commands
             php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
             php artisan view:clear
             php artisan route:cache
-            echo "----- Setting Permissions -----"
+      
+            # Set permissions for Laravel
             sudo chown -R nginx:nginx storage bootstrap/cache
             sudo chmod -R 775 storage bootstrap/cache
             sudo chmod -R 777 storage bootstrap/cache
-            echo "----- Restarting Services -----"
+      
+            # Restart services
             sudo systemctl restart nginx php-fpm
+      
             echo "Deployment Complete!"
           EOF
