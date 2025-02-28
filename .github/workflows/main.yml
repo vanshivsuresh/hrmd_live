@@ -41,8 +41,5 @@ jobs:
             php artisan cache:clear
             php artisan view:clear
             php artisan route:cache
-            sudo chown -R nginx:nginx storage bootstrap/cache
-            sudo chmod -R 775 storage bootstrap/cache
-            sudo chmod -R 777 storage bootstrap/cache
             sudo systemctl restart nginx php-fpm
           EOF
