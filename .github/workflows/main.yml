@@ -27,7 +27,7 @@ jobs:
 
       - name: Deploy to EC2
         env:
-          HOST: ec2-3-110-207-179.ap-south-1.compute.amazonaws.com
+          HOST: ec2-52-66-102-73.ap-south-1.compute.amazonaws.com
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
             cd /var/www/hrmdaddy/hrmd_live
@@ -41,5 +41,8 @@ jobs:
             php artisan cache:clear
             php artisan view:clear
             php artisan route:cache
+            sudo chown -R nginx:nginx storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            sudo chmod -R 777 storage bootstrap/cache
             sudo systemctl restart nginx php-fpm
           EOF
