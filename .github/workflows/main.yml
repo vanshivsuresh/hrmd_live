@@ -3,7 +3,7 @@ name: Deploy Laravel
 on:
   push:
     branches: 
-      - main
+      - hrmd_staging
 
 jobs:
   deploy:
