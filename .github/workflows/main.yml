@@ -3,7 +3,7 @@ name: Deploy Laravel
 on:
   push:
     branches: 
-      - main
+      - hrmd_staging
 
 jobs:
   deploy:
@@ -39,9 +39,9 @@ jobs:
       
             # Pull the latest changes
             git fetch --all
-            git reset --hard origin/main
+            git reset --hard origin/hrmd_staging
             git clean -fd
-            git pull origin main
+            git pull origin hrmd_staging
       
             # Install Composer dependencies
             composer install --no-dev
