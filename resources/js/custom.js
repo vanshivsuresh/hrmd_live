@@ -452,3 +452,42 @@ $(document).ready(function () {
 $('#mobile_menu_collapse').on('click', '.dropdown-item', function() {
     $("#dropdownMenuLink").dropdown("toggle");
 });
+
+
+//added messages for hous and memo to make it dependent on each other
+$(document).ready(function () {
+    // Weekly Timesheet Form Validation
+    $('#timesheetForm').submit(function (e) {
+        let isValid = true;
+        let allFieldsEmpty = true;
+
+        // Loop through each day's inputs
+        $('.day-entry').each(function () {
+            const hours = $(this).find('.hours-input').val().trim();
+            const memo = $(this).find('.memo-input').val().trim();
+
+            // Check if either hours or memo is empty for the day
+            if ((hours === '' && memo !== '') || (hours !== '' && memo === '')) {
+                isValid = false;
+                $(this).find('.hours-input, .memo-input').addClass('is-invalid');
+            } else {
+                $(this).find('.hours-input, .memo-input').removeClass('is-invalid');
+            }
+
+            // Check if any field is not empty
+            if (hours !== '' || memo !== '') {
+                allFieldsEmpty = false;
+            }
+        });
+
+        // Prevent submission if all fields are empty
+        if (allFieldsEmpty) {
+            isValid = false;
+            alert('At least one day must have both hours and memo filled.');
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});

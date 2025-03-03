@@ -1,65 +1,65 @@
-name: Push-to-EC2
+name: Deploy Laravel
 
 on:
   push:
-    branches:
+    branches: 
       - main
 
 jobs:
   deploy:
-    name: Deploy to EC2 on main branch push
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout the files
-        uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Deploy to EC2 using SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Define deployment directory
-            TARGET_DIR="/var/www/hrmdaddy"
-            echo "Deploying to $TARGET_DIR"
-            # Navigate to the existing directory
-            cd $TARGET_DIR
-            # Ensure correct permissions before pulling
-            sudo chown -R $USER:$USER $TARGET_DIR
-            sudo chmod -R 755 $TARGET_DIR
-            # Pull latest changes if repo exists, else initialize git
-            if [ -d ".git" ]; then
-              echo "Git repository found. Pulling latest changes..."
-              git reset --hard origin/main
-              git pull origin main
-            else
-              echo "No repository found! Initializing repository..."
-              git init
-              git remote add origin git@github.com:your-repo.git
-              git fetch origin
-              git checkout -t origin/main
-            fi
-            # Install dependencies only if package.json has changed
-            if [ -f package.json ]; then
-              if git diff --quiet HEAD@{1} HEAD -- package.json; then
-                echo "package.json changed, installing dependencies..."
-                npm install --production
-              else
-                echo "No changes in package.json, skipping npm install."
-              fi
-            fi
-            # Set correct Laravel permissions
-            sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
-            sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
-            sudo chown -R www-data:www-data storage bootstrap/cache
-            # Run Laravel migrations (optional)
+      - name: Debug Private Key
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          cat private_key.pem
+
+      - name: Add SSH Key to Agent
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add private_key.pem
+
+      - name: Deploy to EC2
+        env:
+          HOST: ec2-52-66-102-73.ap-south-1.compute.amazonaws.com
+        run: |
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
+            # cd /var/www/hrmdaddy/hrmd_live
+            sudo chown -R ec2-user:ec2-user /var/www/hrmdaddy/hrmd_live
+            sudo chmod -R 755 /var/www/hrmdaddy/hrmd_live
+      
+            # Navigate to the project directory
+            cd /var/www/hrmdaddy/hrmd_live
+      
+            # Pull the latest changes
+            git fetch --all
+            git reset --hard origin/main
+            git clean -fd
+            git pull origin main
+      
+            # Install Composer dependencies
+            composer install --no-dev
+      
+            # Run Laravel commands
             php artisan migrate --force
-            # Clear caches to reflect changes
             php artisan config:clear
             php artisan cache:clear
             php artisan view:clear
-            php artisan route:clear
-            # Restart Apache to apply changes
-            sudo systemctl reload apache2
+            php artisan route:cache
+      
+            # Set permissions for Laravel
+            sudo chown -R nginx:nginx storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            sudo chmod -R 777 storage bootstrap/cache
+      
+            # Restart services
+            sudo systemctl restart nginx php-fpm
+      
+            echo "Deployment Complete!"
+          EOF
