@@ -1,0 +1,65 @@
+name: Deploy Laravel
+
+on:
+  push:
+    branches:
+      - main  # Trigger deployment when changes are pushed to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Debug Private Key
+        env:
+          PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          cat private_key.pem
+
+      - name: Add SSH Key to Agent
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add private_key.pem
+
+      - name: Deploy to EC2
+        env:
+          HOST: ec2-3-110-90-70.ap-south-1.compute.amazonaws.com
+        run: |
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
+            # Ensure the correct ownership and permissions
+            sudo chown -R ec2-user:ec2-user /var/www/hrmdaddy/hrmd_live
+            sudo chmod -R 755 /var/www/hrmdaddy/hrmd_live
+
+            # Navigate to the project directory
+            cd /var/www/hrmdaddy/hrmd_live
+
+            # Pull the latest changes from the main branch
+            git fetch --all
+            git reset --hard origin/main
+            git clean -fd
+            git pull origin main
+
+            # Install Composer dependencies
+            composer install --no-dev
+
+            # Run Laravel commands
+            php artisan migrate --force
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan view:clear
+            php artisan route:cache
+
+            # Set permissions for Laravel
+            sudo chown -R nginx:nginx storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            sudo chmod -R 777 storage bootstrap/cache
+
+            # Restart services
+            sudo systemctl restart nginx php-fpm
+
+            echo "Deployment to Production Complete!"
+          EOF
