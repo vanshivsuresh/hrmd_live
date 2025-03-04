@@ -20,4 +20,4 @@ if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {
 
 require_once __DIR__.'/public/index.php';
 
-//Adding comment for testing purpose under server.php....
+//Adding comment for testing purpose under server.php....dot is not visible
