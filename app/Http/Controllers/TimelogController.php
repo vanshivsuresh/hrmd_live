@@ -369,7 +369,7 @@ class TimelogController extends AccountBaseController
     {
         $this->pageTitle = __('app.menu.timeLogs');
         $this->editTimelogPermission = user()->permission('edit_timelogs');
-        $this->timeLog = ProjectTimeLog::with('user', 'user.employeeDetail', 'project', 'task', 'breaks', 'activeBreak')->findOrFail($id)->withCustomFields();
+        $this->timeLog = ProjectTimeLog::with('user', 'user.employeeDetail', 'project', 'task','breaks', 'activeBreak')->findOrFail($id)->withCustomFields();
 
         abort_403(!(
             $this->viewTimelogPermission == 'all'

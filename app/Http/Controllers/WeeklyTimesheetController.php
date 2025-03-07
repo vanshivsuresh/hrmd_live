@@ -214,60 +214,57 @@ class WeeklyTimesheetController extends AccountBaseController
     // new code...Added new code to testing the new Prod..
 
     public function store(Request $request)
-        {
-            $taskIds = $request->task_ids;
-            $dates = $request->dates;
-            $hours = $request->hours;
-            $memo = $request->memo;
+    {
+        $taskIds = $request->task_ids;
+        $dates = $request->dates;
+        $hours = $request->hours;
+        $memo = $request->memo;
+        $this->validate($request, [
+            'task_ids' => 'required|array',
+            'dates' => 'required|array',
+            'hours' => 'required|array',
+            'memo' => 'required|array',
+        ], [], [
+            'task_ids' => __('app.task')
+        ]);
 
-            echo"Loacal memo and hours".$memo ."===".$hours;
-
-            // Validate that task_ids are provided
-            $this->validate($request, [
-                'task_ids' => 'required'
-            ], [], [
-                'task_ids' => __('app.task')
-            ]);
-
-            // Check if all fields are empty
-            $allFieldsEmpty = true;
-            foreach ($taskIds as $key => $taskId) {
+        $allFieldsEmpty = true;
+        foreach ($taskIds as $key => $taskId) {
+            if (isset($dates[$key])) {
                 foreach ($dates[$key] as $key2 => $date) {
                     if (!empty($hours[$key][$key2]) || !empty($memo[$key][$key2])) {
                         $allFieldsEmpty = false;
-                        break 2; // Exit both loops if any field is not empty
+                        break 2; 
                     }
                 }
             }
+        }
 
-            // Prevent saving if all fields are empty
-            if ($allFieldsEmpty) {
-                return Reply::error(__('messages.atLeastOneDayRequired'));
-            }
+        if ($allFieldsEmpty) {
+            return Reply::error(__('messages.atLeastOneDayRequired'));
+        }
 
-            reset($taskIds);
-            $firstKey = key($taskIds);
+        reset($taskIds);
+        $firstKey = key($taskIds);
 
-            $weeklyTimesheet = WeeklyTimesheet::firstOrNew([
-                'user_id' => user()->id,
-                'week_start_date' => $dates[$firstKey][0]
-            ]);
-            $weeklyTimesheet->status = $request->status;
-            $weeklyTimesheet->save();
+        $weeklyTimesheet = WeeklyTimesheet::firstOrNew([
+            'user_id' => user()->id,
+            'week_start_date' => $dates[$firstKey][0]
+        ]);
+        $weeklyTimesheet->status = $request->status;
+        $weeklyTimesheet->save();
 
-            // Delete existing entries and time logs
-            $weeklyTimesheet->entries()->delete();
-            ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
+        $weeklyTimesheet->entries()->delete();
+        ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
 
-            // Save new entries
-            foreach ($taskIds as $key => $taskId) {
+        foreach ($taskIds as $key => $taskId) {
+            if (isset($dates[$key])) {
                 foreach ($dates[$key] as $key2 => $date) {
-                    // Skip if both hours and memo are empty
                     if (empty($hours[$key][$key2]) && empty($memo[$key][$key2])) {
                         continue;
                     }
 
-                    // Validate that both hours and memo are provided for the day
+    
                     if (empty($hours[$key][$key2]) || empty($memo[$key][$key2])) {
                         return Reply::error(__('messages.hoursAndMemoRequired'));
                     }
@@ -296,14 +293,15 @@ class WeeklyTimesheetController extends AccountBaseController
                     }
                 }
             }
-
-            if ($weeklyTimesheet->status == 'pending') {
-                SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
-                return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
-            }
-
-            return Reply::success(__('messages.recordSaved'));
         }
+
+        if ($weeklyTimesheet->status == 'pending') {
+            SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
+            return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
+        }
+
+        return Reply::success(__('messages.recordSaved'));
+    }
     // end new code
 
 
