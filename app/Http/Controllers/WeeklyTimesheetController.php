@@ -212,12 +212,15 @@ class WeeklyTimesheetController extends AccountBaseController
 
 
     // new code...Added new code to testing the new Prod..
+
     public function store(Request $request)
         {
             $taskIds = $request->task_ids;
             $dates = $request->dates;
             $hours = $request->hours;
             $memo = $request->memo;
+
+            echo"Loacal memo and hours".$memo ."===".$hours;
 
             // Validate that task_ids are provided
             $this->validate($request, [
