@@ -230,43 +230,39 @@ class WeeklyTimesheetController extends AccountBaseController
         reset($taskIds);
         $firstKey = key($taskIds);
 
-        $weeklyTimesheet = WeeklyTimesheet::firstOrNew(['user_id' => user()->id, 'week_start_date' => $dates[$firstKey][0]]);
+        $weeklyTimesheet = WeeklyTimesheet::firstOrNew([
+            'user_id' => user()->id,
+            'week_start_date' => $dates[$firstKey][0]
+        ]);
         $weeklyTimesheet->status = $request->status;
         $weeklyTimesheet->save();
-
-        $weeklyTimesheet->entries()->delete();
-        ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
 
         foreach ($taskIds as $key => $taskId) {
             foreach ($dates[$key] as $key2 => $date) {
                 $currentHours = $hours[$key][$key2] ?? 0;
                 $currentMemo = $memo[$key][$key2] ?? '';
 
-                // Condition 1: If memo is blank and hours are blank, show warning and prevent save
-                if ($currentHours == 0 && empty($currentMemo)) {
-                    return Reply::error(__('messages.hoursAndMemoRequired'));
+                // **Apply validation only to the current day's entry**
+                if ($request->has('dates') && isset($dates[$key][$key2])) {
+                    // If memo is blank and hours are blank, prevent saving and show warning
+                    if ($currentHours == 0 && empty($currentMemo)) {
+                        return Reply::error(__('messages.atLeastOneDayRequired'));
+                    }
+
+                    // If memo is blank but hours are present, prevent saving
+                    if ($currentHours > 0 && empty($currentMemo)) {
+                        return Reply::error(__('messages.hoursAndMemoRequired'));
+                    }
                 }
 
-                // Condition 2: If memo is blank but hours are present, prevent save
-                if ($currentHours > 0 && empty($currentMemo)) {
-                    return Reply::error(__('messages.atLeastOneDayRequired'));
-                }
-
-                // Condition 3: If memo is present but hours are blank, allow saving
-
+                // Save only if validation is passed
                 $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew([
                     'weekly_timesheet_id' => $weeklyTimesheet->id,
                     'date' => $date,
                     'task_id' => $taskId
                 ]);
 
-                if ($weeklyTimesheetEntry->exists) {
-                    $hour = $weeklyTimesheetEntry->hours;
-                } else {
-                    $hour = 0;
-                }
-
-                $weeklyTimesheetEntry->hours = $hour + $currentHours;
+                $weeklyTimesheetEntry->hours = $currentHours;
                 $weeklyTimesheetEntry->memo = $currentMemo;
                 $weeklyTimesheetEntry->save();
 
@@ -292,6 +288,7 @@ class WeeklyTimesheetController extends AccountBaseController
 
         return Reply::success(__('messages.recordSaved'));
     }
+
 
 
     // end new code
