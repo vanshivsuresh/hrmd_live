@@ -215,74 +215,84 @@ class WeeklyTimesheetController extends AccountBaseController
     // new code...Added new code to testing the new Prod..
 
     public function store(Request $request)
-        {
-            $taskIds = $request->task_ids;
-            $dates = $request->dates;
-            $hours = $request->hours;
-            $memo = $request->memo;
+    {
+        $taskIds = $request->task_ids;
+        $dates = $request->dates;
+        $hours = $request->hours;
+        $memo = $request->memo;
 
-            $this->validate($request, [
-                'task_ids' => 'required'
-            ], [], [
-                'task_ids' => __('app.task')
-            ]);
+        $this->validate($request, [
+            'task_ids' => 'required'
+        ], [], [
+            'task_ids' => __('app.task')
+        ]);
 
-            reset($taskIds);
+        reset($taskIds);
+        $firstKey = key($taskIds);
 
-            $firstKey = key($taskIds);
-            
-            $weeklyTimesheet = WeeklyTimesheet::firstOrNew(['user_id' => user()->id, 'week_start_date' => $dates[$firstKey][0]]);
-            $weeklyTimesheet->status = $request->status;
-            $weeklyTimesheet->save();
+        $weeklyTimesheet = WeeklyTimesheet::firstOrNew(['user_id' => user()->id, 'week_start_date' => $dates[$firstKey][0]]);
+        $weeklyTimesheet->status = $request->status;
+        $weeklyTimesheet->save();
 
-            $weeklyTimesheet->entries()->delete();
-            ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
+        $weeklyTimesheet->entries()->delete();
+        ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
 
-            foreach ($taskIds as $key => $taskId) {
-                foreach($dates[$key] as $key2 => $date) {
-                    // Skip saving if hours are 0 and memo is empty
-                    if ($hours[$key][$key2] == 0 && empty($memo[$key][$key2])) {
-                        continue;
-                    }
+        foreach ($taskIds as $key => $taskId) {
+            foreach ($dates[$key] as $key2 => $date) {
+                $currentHours = $hours[$key][$key2] ?? 0;
+                $currentMemo = $memo[$key][$key2] ?? '';
 
-                    $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew([
-                        'weekly_timesheet_id' => $weeklyTimesheet->id, 
-                        'date' => $date, 
-                        'task_id' => $taskId
-                    ]);
+                // Condition 1: If memo is blank and hours are blank, show warning and prevent save
+                if ($currentHours == 0 && empty($currentMemo)) {
+                    return Reply::error(__('messages.hoursAndMemoRequired'));
+                }
 
-                    if ($weeklyTimesheetEntry->exists) {
-                        $hour = $weeklyTimesheetEntry->hours;
-                    } else {
-                        $hour = 0;
-                    }
+                // Condition 2: If memo is blank but hours are present, prevent save
+                if ($currentHours > 0 && empty($currentMemo)) {
+                    return Reply::error(__('messages.atLeastOneDayRequired'));
+                }
 
-                    $weeklyTimesheetEntry->hours = $hour + $hours[$key][$key2];
-                    $weeklyTimesheetEntry->memo = $memo[$key][$key2];
-                    $weeklyTimesheetEntry->save();
+                // Condition 3: If memo is present but hours are blank, allow saving
 
-                    if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
-                        $timeLog = new ProjectTimeLog();
-                        $timeLog->task_id = $taskId;
-                        $timeLog->user_id = $weeklyTimesheet->user_id;
-                        $timeLog->total_hours = $weeklyTimesheetEntry->hours;
-                        $timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
-                        $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
-                        $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
-                        $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
-                        $timeLog->memo = $memo[$key][$key2];
-                        $timeLog->save();
-                    }
+                $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew([
+                    'weekly_timesheet_id' => $weeklyTimesheet->id,
+                    'date' => $date,
+                    'task_id' => $taskId
+                ]);
+
+                if ($weeklyTimesheetEntry->exists) {
+                    $hour = $weeklyTimesheetEntry->hours;
+                } else {
+                    $hour = 0;
+                }
+
+                $weeklyTimesheetEntry->hours = $hour + $currentHours;
+                $weeklyTimesheetEntry->memo = $currentMemo;
+                $weeklyTimesheetEntry->save();
+
+                if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
+                    $timeLog = new ProjectTimeLog();
+                    $timeLog->task_id = $taskId;
+                    $timeLog->user_id = $weeklyTimesheet->user_id;
+                    $timeLog->total_hours = $weeklyTimesheetEntry->hours;
+                    $timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
+                    $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
+                    $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
+                    $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
+                    $timeLog->memo = $currentMemo;
+                    $timeLog->save();
                 }
             }
-
-            if ($weeklyTimesheet->status == 'pending') {
-                SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
-                return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
-            }
-
-            return Reply::success(__('messages.recordSaved'));
         }
+
+        if ($weeklyTimesheet->status == 'pending') {
+            SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
+            return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
+        }
+
+        return Reply::success(__('messages.recordSaved'));
+    }
+
 
     // end new code
 
