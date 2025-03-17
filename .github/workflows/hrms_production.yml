@@ -27,7 +27,7 @@ jobs:
 
       - name: Deploy to EC2
         env:
-          HOST: ec2-3-110-90-70.ap-south-1.compute.amazonaws.com
+          HOST: ec2-13-203-166-236.ap-south-1.compute.amazonaws.com
         run: |
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem ec2-user@$HOST << 'EOF'
             # Ensure the correct ownership and permissions
