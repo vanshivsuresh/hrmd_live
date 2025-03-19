@@ -375,7 +375,8 @@ class TimeLogsDataTable extends BaseDataTable
             __('modules.timeLogs.startTime') => ['data' => 'start_time', 'name' => 'start_time', 'title' => __('modules.timeLogs.startTime')],
             __('modules.timeLogs.endTime') => ['data' => 'end_time', 'name' => 'end_time', 'title' => __('modules.timeLogs.endTime')],
             __('modules.timeLogs.totalHours') => ['data' => 'total_hours', 'name' => 'total_hours', 'title' => __('modules.timeLogs.totalHours')],
-            __('app.earnings') => ['data' => 'earnings', 'name' => 'earnings', 'title' => __('app.earnings'), 'visible' => ($this->viewTimelogEarningsPermission == 'all'), 'exportable' => ($this->viewTimelogEarningsPermission == 'all')]
+            __('app.earnings') => ['data' => 'earnings', 'name' => 'earnings', 'title' => __('app.earnings'), 'visible' => ($this->viewTimelogEarningsPermission == 'all'), 'exportable' => ($this->viewTimelogEarningsPermission == 'all')],
+            __('modules.timeLogs.memo') => ['data' => 'memo', 'name' => 'memo', 'title' => __('modules.timeLogs.memo'), 'exportable' => true, 'visible' => true]
         ];
 
         $action = [

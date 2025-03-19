@@ -353,6 +353,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
         for ($index = 1; $index <= $num; $index++) {
             $emp_status = $employeedata['dates'][$index]['comments']['status'];
+            echo "employee status  $emp_status";
 
             // Check if the employee is present
             if (str_contains($emp_status, 'Present')) {
