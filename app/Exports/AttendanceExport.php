@@ -303,7 +303,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                     $status = __('app.halfday') . $halfDayType;
                 }
                 else {
-                    $status = '--';
+                    $status = 'Present';
                 }
 
                 $workFrom = $attendance->working_from ?? '--';
