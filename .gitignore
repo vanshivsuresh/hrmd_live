@@ -23,3 +23,5 @@ resources/lang/*
 !resources/lang/eng/
 !resources/lang/vendor/backup/eng
 !resources/lang/eng.json
+.env
+*.yml
