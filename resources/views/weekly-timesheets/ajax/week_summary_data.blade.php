@@ -205,8 +205,10 @@
             }
         });
 
+        
         $('.submit-timesheet').click(function (e) {
             // $('#status').val($(this).data('status'));
+
             // new code
             var status = $(this).data('status');
             var confirmationMessage = '';
@@ -217,6 +219,7 @@
                 confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
             }
             $('#status').val(status);
+
             // end new code
 
             Swal.fire({
@@ -267,5 +270,113 @@
         } else {
             $('.week-task, .week-hours').prop('disabled', true);
         }
+
+
+        // $('.submit-timesheet').click(function (e) {
+		// 	var input = $("input[name='hours[0][]']");
+		// 	var errorSpan = input.next(".error");
+		// 	var value = input.val().trim();
+		// 	var isValid = true;
+		// 	var errorMessage = "";
+
+		// 	if (value === "") {
+		// 		errorMessage = "This field is required.";
+		// 		isValid = false;
+		// 	} else if (isNaN(value)) {
+		// 		errorMessage = "Please enter a valid number.";
+		// 		isValid = false;
+		// 	} else if (value < 0) {
+		// 		errorMessage = "Minimum value allowed is 0.";
+		// 		isValid = false;
+		// 	} else if (value > 24) {
+		// 		errorMessage = "Maximum value allowed is 24.";
+		// 		isValid = false;
+		// 	}
+
+		// 	if (!isValid) {
+		// 		$("<span class='error-message' style='color:red; font-size:14px;'>"+errorMessage+"</span>").insertAfter($("input[name='hours[0][]']"));
+		// 		return false;
+		// 	}
+
+		// 	var textarea = $("textarea[name='memo[0][]']");
+		// 	var errorSpan = textarea.next(".error");
+		// 	var value = textarea.val().trim();
+		// 	var isValid = true;
+		// 	var errorMessage = "";
+
+		// 	if (value === "") {
+		// 		errorMessage = "This field is required.";
+		// 		isValid = false;
+		// 	} else if (value.length < 5) {
+		// 		errorMessage = "Memo must be at least 5 characters long.";
+		// 		isValid = false;
+		// 	}
+
+		// 	if (!isValid) {
+		// 		$("<span class='error-message' style='color:red; font-size:14px;'>"+errorMessage+"</span>").insertAfter($("textarea[name='memo[0][]']"));
+		// 		return false;
+		// 	}
+
+		// 	// $('#status').val($(this).data('status'));
+		// 	// new code
+		// 	var status = $(this).data('status');
+		// 	var confirmationMessage = '';
+
+		// 	if (status === 'draft') {
+		// 		confirmationMessage = "{{ __('messages.saveWeeklyTimesheetConfirmation') }}";
+		// 	} else if (status === 'pending') {
+		// 		confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
+		// 	}
+		// 	$('#status').val(status);
+		// 	// end new code
+
+		// 	Swal.fire({
+		// 		title: "@lang('messages.sweetAlertTitle')",
+		// 		// text: "@lang('messages.submitWeeklyTimesheetConfirmation')",
+		// 		text: confirmationMessage,
+		// 		icon: 'warning',
+		// 		showCancelButton: true,
+		// 		focusConfirm: false,
+		// 		confirmButtonText: "@lang('messages.confirm')",
+		// 		cancelButtonText: "@lang('app.cancel')",
+		// 		customClass: {
+		// 			confirmButton: 'btn btn-primary mr-3',
+		// 			cancelButton: 'btn btn-secondary'
+		// 		},
+		// 		showClass: {
+		// 			popup: 'swal2-noanimation',
+		// 			backdrop: 'swal2-noanimation'
+		// 		},
+		// 		buttonsStyling: false
+		// 	}).then((result) => {
+		// 		if (result.isConfirmed) {
+		// 			$.easyAjax({
+		// 				url: "{{ route('weekly-timesheets.store') }}",
+		// 				type: 'POST',
+		// 				container: '#weekly-timesheet-form',
+		// 				blockUI: true,
+		// 				buttonSelector: '#submit-timesheet',
+		// 				disableButton: true,
+		// 				data: $('#weekly-timesheet-form').serialize(),
+		// 				success: function (response) {
+		// 					console.log(response);
+		// 				}
+		// 			});
+		// 		}
+		// 	});
+		// });
+
+		// $('#weekly-timesheet-table').on('click', '.remove-task', function (e) {
+		// 	e.preventDefault();
+		// 	$(this).closest('tr').remove();
+		// });
+
+		// if($('#status').val() == 'draft') {
+		// 	$('.week-task, .week-hours').prop('disabled', false);
+		// } else {
+		// 	$('.week-task, .week-hours').prop('disabled', true);
+		// }
+
+
     });
 </script>

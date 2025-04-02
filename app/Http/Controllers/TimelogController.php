@@ -139,6 +139,8 @@ class TimelogController extends AccountBaseController
 
     public function create()
     {
+        // echo "create method is called!";
+        // exit;
         $this->pageTitle = __('modules.timeLogs.logTime');
         $this->addTimelogPermission = user()->permission('add_timelogs');
         session(['add_timelogs_permission' => $this->addTimelogPermission]);

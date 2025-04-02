@@ -372,7 +372,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     
 
-    // public function map($employeedata): array==>suresh
+    // public function map($employeedata): array
     // {
     //     $data = array();
     //     $data[] = $employeedata['employee_name'];
@@ -392,6 +392,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     //     return $data;
     // }
+
 
     public function checkHolidays($attendances, $date)
     {

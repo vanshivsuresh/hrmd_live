@@ -54,7 +54,6 @@
                                 </div>
                             @endif
 
-
                         </div>
 
                         <div class="row">
@@ -65,7 +64,7 @@
                                     :fieldPlaceholder="__('placeholders.date')" />
                             </div>
 
-                            <div class="col-md-3 col-lg-3">
+                            <!-- <div class="col-md-3 col-lg-3">
                                 <div class="bootstrap-timepicker timepicker">
                                     <x-forms.text :fieldLabel="__('modules.timeLogs.startTime')"
                                         :fieldPlaceholder="__('placeholders.hours')" fieldName="start_time"
@@ -78,7 +77,7 @@
                                     :fieldLabel="__('modules.timeLogs.endDate')" fieldName="end_date"
                                     :fieldValue="now(company()->timezone)->format(company()->date_format)"
                                     :fieldPlaceholder="__('placeholders.date')" />
-                            </div>
+                            </div> 
 
                             <div class="col-md-3 col-lg-3">
                                 <div class="bootstrap-timepicker timepicker">
@@ -86,20 +85,35 @@
                                         :fieldPlaceholder="__('placeholders.hours')" fieldName="end_time"
                                         fieldId="end_time" fieldRequired="true" />
                                 </div>
+                            </div> -->
+                            <div class="col-md-3 col-lg-3">
+                                <div class="bootstrap-timepicker timepicker">
+                                    <x-forms.text :fieldLabel="__('modules.timeLogs.totalHours')"
+                                        :fieldPlaceholder="__('placeholders.total_hours')" fieldName="total_hours"
+                                        fieldId="total_hours" fieldRequired="true" />
+                                </div>
                             </div>
+
+
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <!-- <div class="col-md-6">
                         <x-forms.text :fieldLabel="__('modules.timeLogs.memo')" fieldName="memo" fieldRequired="true"
+                            fieldId="memo" :fieldPlaceholder="__('placeholders.timelog.memo')" />
+                    </div>  -->
+
+                    <div class="col-md-6">
+                        <x-forms.textarea :fieldLabel="__('modules.timeLogs.memo')" fieldName="memo" fieldRequired="true"
                             fieldId="memo" :fieldPlaceholder="__('placeholders.timelog.memo')" />
                     </div>
 
-                    <div class="col-md-6">
+
+                    <!-- <div class="col-md-6">
                         <x-forms.label fieldId="total_time" class="my-3"
                             :fieldLabel="__('modules.timeLogs.totalHours')" />
                         <p id="total_time" class="f-w-500 text-primary f-21">0 @lang('app.hrs')</p>
-                    </div>
+                    </div> -->
 
                 </div>
                 <x-forms.custom-field :fields="$fields"></x-forms.custom-field>
@@ -200,6 +214,22 @@
 
         $('#save-timelog-form').click(function() {
             const url = "{{ route('timelogs.store') }}";
+            
+            // new code.
+            // if ($('#project_id2').val() === '' || $('#task_id2').val() === '' || 
+            //     $('#user_id2').val() === '' || $('#total_hours').val() === '') {
+            //     Swal.fire({
+            //         icon: 'error',
+            //         title: 'Error',
+            //         text: 'Please fill all required fields',
+            //         customClass: {
+            //             confirmButton: 'btn btn-primary',
+            //         },
+            //         buttonsStyling: false
+            //     });
+            //     return false;
+            // }
+            // end new code.
 
             $.easyAjax({
                 url: url,
@@ -207,7 +237,7 @@
                 type: "POST",
                 disableButton: true,
                 blockUI: true,
-                file: true,
+                // file: true,
                 buttonSelector: "#save-timelog-form",
                 data: $('#save-timelog-data-form').serialize(),
                 success: function(response) {
