@@ -18,6 +18,7 @@ $addAttendancePermission = user()->permission('add_attendance');
         @foreach ($employeeAttendence as $key => $attendance)
             @php
                 $totalPresent = 0;
+                $totalLeaves = 0;
                 $userId = explode('#', $key);
                 $userId = $userId[0];
             @endphp
@@ -30,6 +31,10 @@ $addAttendancePermission = user()->permission('add_attendance');
                         @endphp
                         <td class="px-1">
                             @if ($day == 'Leave')
+        
+                                @php
+                                    $totalLeaves++;
+                                @endphp
                                 <span data-toggle="tooltip" data-original-title="{{ $leaveReasons[$userId][$key2] }}"><i
                                         class="fa fa-plane-departure text-red"></i></span>
                             @elseif ($day == 'Day Off')
@@ -47,6 +52,10 @@ $addAttendancePermission = user()->permission('add_attendance');
                                     </a>
                                 @endif
                             @elseif ($day == 'Absent')
+                                @php
+                                    $totalLeaves++;
+                                @endphp
+
                                 <a @if ($addAttendancePermission == 'all') href="javascript:;" class="edit-attendance" @endif data-user-id="{{ $userId }}"
                                     data-attendance-date="{{ $key2 }}"><i
                                         class="fa fa-times text-lightest"></i></a>
@@ -68,7 +77,8 @@ $addAttendancePermission = user()->permission('add_attendance');
                     @endif
                 @endforeach
                 <td class="text-dark f-w-500 text-right attendance-total px-2 w-100">
-                    {!! $totalPresent . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}</td>
+                    <!-- {!! $totalPresent . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}</td> -->
+                    {!! (count($attendance) - 1) - ($totalLeaves) . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}
             </tr>
         @endforeach
     </x-table>
