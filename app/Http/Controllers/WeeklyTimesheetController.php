@@ -17,407 +17,403 @@ use App\Events\WeeklyTimesheetDraftEvent;
 
 class WeeklyTimesheetController extends AccountBaseController
 {
-    public function __construct()
-    {
-        parent::__construct();
-        $this->pageTitle = 'app.menu.weeklyTimesheets';
-        $this->middleware(function ($request, $next) {
-            $this->timelogMenuType = 'weekly-timesheets';
-            abort_403(!in_array('timelogs', $this->user->modules));
+	public function __construct()
+	{
+		parent::__construct();
+		$this->pageTitle = 'app.menu.weeklyTimesheets';
+		$this->middleware(function ($request, $next) {
+			$this->timelogMenuType = 'weekly-timesheets';
+			abort_403(!in_array('timelogs', $this->user->modules));
 
-            return $next($request);
-        });
-    }
+			return $next($request);
+		});
+	}
 
-    public function index()
-    {
+	public function index()
+	{
+		$this->timelogMenuType = 'weekly-timesheets';
 
-        $this->timelogMenuType = 'weekly-timesheets';
+		if (request()->ajax()) {
+			return $this->weekSummaryData(request());
+		}
 
-        if (request()->ajax()) {
-            return $this->weekSummaryData(request());
-        }
+		if (request()->view == 'pending_approval') {
+			$this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
 
-        if (request()->view == 'pending_approval') {
-            $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
+			// dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
 
-            // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+			if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
+				->join('employee_details', 'employee_details.user_id', 'users.id')
+				->whereIn('employee_details.reporting_to', [user()->id]);
+			} elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
+			}
 
-            if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
-                ->join('employee_details', 'employee_details.user_id', 'users.id')
-                ->whereIn('employee_details.reporting_to', [user()->id]);
-            } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
-            }
+			if (request()->id) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
+			}
 
-            if (request()->id) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
-            }
+			$this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
 
-            $this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
+			return view('weekly-timesheets.pending_approval', $this->data);
 
-            return view('weekly-timesheets.pending_approval', $this->data);
+		}  if (request()->view == 'pending_approval') {
+			$this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
 
-        }  if (request()->view == 'pending_approval') {
-            $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
+			// dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
 
-            // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+			if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
+				->join('employee_details', 'employee_details.user_id', 'users.id')
+				->whereIn('employee_details.reporting_to', [user()->id]);
+			} elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
+			}
 
-            if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
-                ->join('employee_details', 'employee_details.user_id', 'users.id')
-                ->whereIn('employee_details.reporting_to', [user()->id]);
-            } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
-            }
+			if (request()->id) {
+				$this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
+			}
 
-            if (request()->id) {
-                $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
-            }
+			$this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
 
-            $this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
+			return view('weekly-timesheets.pending_approval', $this->data);
+		}
 
-            return view('weekly-timesheets.pending_approval', $this->data);
+		$this->pendingApproval = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
 
-        }
+		if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
+			$this->pendingApproval = $this->pendingApproval->join('users', 'weekly_timesheets.user_id', 'users.id')
+			->join('employee_details', 'employee_details.user_id', 'users.id')
+			->whereIn('employee_details.reporting_to', [user()->id]);
+		} elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
+			$this->pendingApproval = $this->pendingApproval->where('weekly_timesheets.user_id', user()->id);
+		}
 
-        $this->pendingApproval = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
+		$this->pendingApproval = $this->pendingApproval->count();
 
-        if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
-            $this->pendingApproval = $this->pendingApproval->join('users', 'weekly_timesheets.user_id', 'users.id')
-            ->join('employee_details', 'employee_details.user_id', 'users.id')
-            ->whereIn('employee_details.reporting_to', [user()->id]);
-        } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
-            $this->pendingApproval = $this->pendingApproval->where('weekly_timesheets.user_id', user()->id);
-        }
+		$now = now();
+		$this->year = $now->format('Y');
+		$this->month = $now->format('m');
 
-        $this->pendingApproval = $this->pendingApproval->count();
+		return view('weekly-timesheets.index', $this->data);
+	}
 
-        $now = now();
-        $this->year = $now->format('Y');
-        $this->month = $now->format('m');
+	public function weekSummaryData($request)
+	{
 
-        return view('weekly-timesheets.index', $this->data);
-    }
+		$now = Carbon::parse($request->week_start_date, company()->timezone);
+		$this->weekStartDate = $now->copy()->startOfWeek(attendance_setting()->week_start_from);
+		$this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
+		$this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate); // Get All Dates from start to end date
 
-    public function weekSummaryData($request)
-    {
+		$this->weekTimesheet = WeeklyTimesheet::where('user_id', user()->id)
+		->whereDate('week_start_date', $this->weekStartDate)
+		->first();
 
-        $now = Carbon::parse($request->week_start_date, company()->timezone);
-        $this->weekStartDate = $now->copy()->startOfWeek(attendance_setting()->week_start_from);
-        $this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
-        $this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate); // Get All Dates from start to end date
+		$weekDates = [];
 
-        $this->weekTimesheet = WeeklyTimesheet::where('user_id', user()->id)
-        ->whereDate('week_start_date', $this->weekStartDate)
-        ->first();
+		foreach($this->weekPeriod as $date) {
+			$dateFormatted = $date->format('Y-m-d');
+			$weekDates[] = $dateFormatted;
+		}
 
-        $weekDates = [];
+		$tasks = Task::leftJoin('task_users', 'task_users.task_id', '=', 'tasks.id')
+			->where('task_users.user_id', '=', user()->id)
+			->where(function ($query) {
+				return $query->where(function ($q) {
+					// Task starts before or on end date AND ends after or on start date
+					$q->whereDate('tasks.start_date', '<=', $this->weekEndDate)
+					->where(function ($q) {
+						$q->whereDate('tasks.due_date', '>=', $this->weekStartDate)
+						->orWhereNull('tasks.due_date');
+					});
+				});
+			})
+			->select('tasks.id', 'tasks.heading')
+			->get();
 
-        foreach($this->weekPeriod as $date) {
-            $dateFormatted = $date->format('Y-m-d');
-            $weekDates[] = $dateFormatted;
-        }
+		$this->tasksForWeek = $tasks;
+		$this->weekDates = $weekDates;
 
-        $tasks = Task::leftJoin('task_users', 'task_users.task_id', '=', 'tasks.id')
-            ->where('task_users.user_id', '=', user()->id)
-            ->where(function ($query) {
-                return $query->where(function ($q) {
-                    // Task starts before or on end date AND ends after or on start date
-                    $q->whereDate('tasks.start_date', '<=', $this->weekEndDate)
-                      ->where(function ($q) {
-                        $q->whereDate('tasks.due_date', '>=', $this->weekStartDate)
-                          ->orWhereNull('tasks.due_date');
-                      });
-                });
-            })
-            ->select('tasks.id', 'tasks.heading')
-            ->get();
+		$view = view('weekly-timesheets.ajax.week_summary_data', $this->data)->render();
 
-        $this->tasksForWeek = $tasks;
-        $this->weekDates = $weekDates;
+		return Reply::dataOnly(['status' => 'success', 'data' => $view]);
+	}
 
-        $view = view('weekly-timesheets.ajax.week_summary_data', $this->data)->render();
+	public function store(Request $request)
+	{
 
-        return Reply::dataOnly(['status' => 'success', 'data' => $view]);
-    }
-
-
-    public function store(Request $request)
-    {
-        $taskIds = $request->task_ids;
-        $dates = $request->dates;
-        $hours = $request->hours;
-        $memo = $request->memo;
+		$taskIds = $request->task_ids;
+		$dates = $request->dates;
+		$hours = $request->hours;
+		$memo = $request->memo;
 
 
-        $this->validate($request, [
-            'task_ids' => 'required'
-        ], [], [
-            'task_ids' => __('app.task')
-        ]);
+		$this->validate($request, [
+			'task_ids' => 'required'
+		], [], [
+			'task_ids' => __('app.task')
+		]);
 
+		reset($taskIds);
 
-        reset($taskIds);
+		$firstKey = key($taskIds);
+		
+		$weeklyTimesheet = WeeklyTimesheet::firstOrNew(['user_id' => user()->id, 'week_start_date' => $dates[$firstKey][0]]);
+		$weeklyTimesheet->status = $request->status;
+		$weeklyTimesheet->save();
 
-        $firstKey = key($taskIds);
-        
-        $weeklyTimesheet = WeeklyTimesheet::firstOrNew(['user_id' => user()->id, 'week_start_date' => $dates[$firstKey][0]]);
-        $weeklyTimesheet->status = $request->status;
-        $weeklyTimesheet->save();
+		$weeklyTimesheet->entries()->delete();
+		ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
 
-        $weeklyTimesheet->entries()->delete();
-        ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
+		foreach ($taskIds as $key => $taskId) {
 
-        foreach ($taskIds as $key => $taskId) {
+			foreach($dates[$key] as $key2 => $date) {
+				$weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew(['weekly_timesheet_id' => $weeklyTimesheet->id, 'date' => $date, 'task_id' => $taskId]);
 
-            foreach($dates[$key] as $key2 => $date) {
-                $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew(['weekly_timesheet_id' => $weeklyTimesheet->id, 'date' => $date, 'task_id' => $taskId]);
+				if ($weeklyTimesheetEntry->exists) {
+					$hour = $weeklyTimesheetEntry->hours;
+				} else {
+					$hour = 0;
+				}
 
-                if ($weeklyTimesheetEntry->exists) {
-                    $hour = $weeklyTimesheetEntry->hours;
-                } else {
-                    $hour = 0;
-                }
-
-                $weeklyTimesheetEntry->hours = $hour + $hours[$key][$key2];
+				$weeklyTimesheetEntry->hours = $hour + $hours[$key][$key2];
 				$weeklyTimesheetEntry->memo = $memo[$key][$key2];
-                $weeklyTimesheetEntry->save();
+				$weeklyTimesheetEntry->save();
 
-                if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
+				if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
 
-                    $timeLog = new ProjectTimeLog();
-                    $timeLog->task_id = $taskId;
-                    $timeLog->user_id = $weeklyTimesheet->user_id;
-                    $timeLog->total_hours = $weeklyTimesheetEntry->hours;
-                    $timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
-                    $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
-                    $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
-                    $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
-                    $timeLog->memo = $memo[$key][$key2];
-                    $timeLog->save();
-                }
-            }
-        }
+					$timeLog = new ProjectTimeLog();
+					$timeLog->task_id = $taskId;
+					$timeLog->user_id = $weeklyTimesheet->user_id;
+					$timeLog->total_hours = $weeklyTimesheetEntry->hours;
+					$timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
+					$timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
+					$timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
+					$timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
+					$timeLog->memo = $memo[$key][$key2];
+					$timeLog->save();
+				}
+			}
+		}
 
-        if ($weeklyTimesheet->status == 'pending') {
-            SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
+		if ($weeklyTimesheet->status == 'pending') {
+			SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
 
-            return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
-        }
+			return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
+		}
 
-        return Reply::success(__('messages.recordSaved'));
-    }
-
-
-
-    
-
-    // new code...Added new code to testing the new Prod..
-
-    // public function store(Request $request)
-    //     {
-    //         $taskIds = $request->task_ids;
-    //         $dates = $request->dates;
-    //         $hours = $request->hours;
-    //         $memo = $request->memo;
-
-    //         // Validate that task_ids are provided
-    //         $this->validate($request, [
-    //             'task_ids' => 'required'
-    //         ], [], [
-    //             'task_ids' => __('app.task')
-    //         ]);
-
-    //         // Check if all fields are empty
-    //         $allFieldsEmpty = true;
-    //         foreach ($taskIds as $key => $taskId) {
-    //             foreach ($dates[$key] as $key2 => $date) {
-    //                 if (!empty($hours[$key][$key2]) || !empty($memo[$key][$key2])) {
-    //                     $allFieldsEmpty = false;
-    //                     break 2; // Exit both loops if any field is not empty
-    //                 }
-    //             }
-    //         }
-
-    //         // Prevent saving if all fields are empty
-    //         if ($allFieldsEmpty) {
-    //             return Reply::error(__('messages.atLeastOneDayRequired'));
-    //         }
-
-    //         reset($taskIds);
-    //         $firstKey = key($taskIds);
-
-    //         $weeklyTimesheet = WeeklyTimesheet::firstOrNew([
-    //             'user_id' => user()->id,
-    //             'week_start_date' => $dates[$firstKey][0]
-    //         ]);
-    //         $weeklyTimesheet->status = $request->status;
-    //         $weeklyTimesheet->save();
-
-    //         // Delete existing entries and time logs
-    //         $weeklyTimesheet->entries()->delete();
-    //         ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
-
-    //         // Save new entries
-    //         foreach ($taskIds as $key => $taskId) {
-    //             foreach ($dates[$key] as $key2 => $date) {
-    //                 // Skip if both hours and memo are empty
-    //                 if (empty($hours[$key][$key2]) && empty($memo[$key][$key2])) {
-    //                     continue;
-    //                 }
-
-    //                 // Validate that both hours and memo are provided for the day
-    //                 if (empty($hours[$key][$key2]) || empty($memo[$key][$key2])) {
-    //                     return Reply::error(__('messages.hoursAndMemoRequired'));
-    //                 }
-
-    //                 $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew([
-    //                     'weekly_timesheet_id' => $weeklyTimesheet->id,
-    //                     'date' => $date,
-    //                     'task_id' => $taskId
-    //                 ]);
-
-    //                 $weeklyTimesheetEntry->hours = $hours[$key][$key2];
-    //                 $weeklyTimesheetEntry->memo = $memo[$key][$key2];
-    //                 $weeklyTimesheetEntry->save();
-
-    //                 if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
-    //                     $timeLog = new ProjectTimeLog();
-    //                     $timeLog->task_id = $taskId;
-    //                     $timeLog->user_id = $weeklyTimesheet->user_id;
-    //                     $timeLog->total_hours = $weeklyTimesheetEntry->hours;
-    //                     $timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
-    //                     $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
-    //                     $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
-    //                     $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
-    //                     $timeLog->memo = $memo[$key][$key2];
-    //                     $timeLog->save();
-    //                 }
-    //             }
-    //         }
-
-    //         if ($weeklyTimesheet->status == 'pending') {
-    //             SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
-    //             return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
-    //         }
-
-    //         return Reply::success(__('messages.recordSaved'));
-    //     }
+		return Reply::success(__('messages.recordSaved'));
+	}
 
 
 
-    // end new code
+	
+
+	// new code...Added new code to testing the new Prod..
+
+	// public function store(Request $request)
+	//     {
+	//         $taskIds = $request->task_ids;
+	//         $dates = $request->dates;
+	//         $hours = $request->hours;
+	//         $memo = $request->memo;
+
+	//         // Validate that task_ids are provided
+	//         $this->validate($request, [
+	//             'task_ids' => 'required'
+	//         ], [], [
+	//             'task_ids' => __('app.task')
+	//         ]);
+
+	//         // Check if all fields are empty
+	//         $allFieldsEmpty = true;
+	//         foreach ($taskIds as $key => $taskId) {
+	//             foreach ($dates[$key] as $key2 => $date) {
+	//                 if (!empty($hours[$key][$key2]) || !empty($memo[$key][$key2])) {
+	//                     $allFieldsEmpty = false;
+	//                     break 2; // Exit both loops if any field is not empty
+	//                 }
+	//             }
+	//         }
+
+	//         // Prevent saving if all fields are empty
+	//         if ($allFieldsEmpty) {
+	//             return Reply::error(__('messages.atLeastOneDayRequired'));
+	//         }
+
+	//         reset($taskIds);
+	//         $firstKey = key($taskIds);
+
+	//         $weeklyTimesheet = WeeklyTimesheet::firstOrNew([
+	//             'user_id' => user()->id,
+	//             'week_start_date' => $dates[$firstKey][0]
+	//         ]);
+	//         $weeklyTimesheet->status = $request->status;
+	//         $weeklyTimesheet->save();
+
+	//         // Delete existing entries and time logs
+	//         $weeklyTimesheet->entries()->delete();
+	//         ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
+
+	//         // Save new entries
+	//         foreach ($taskIds as $key => $taskId) {
+	//             foreach ($dates[$key] as $key2 => $date) {
+	//                 // Skip if both hours and memo are empty
+	//                 if (empty($hours[$key][$key2]) && empty($memo[$key][$key2])) {
+	//                     continue;
+	//                 }
+
+	//                 // Validate that both hours and memo are provided for the day
+	//                 if (empty($hours[$key][$key2]) || empty($memo[$key][$key2])) {
+	//                     return Reply::error(__('messages.hoursAndMemoRequired'));
+	//                 }
+
+	//                 $weeklyTimesheetEntry = WeeklyTimesheetEntries::firstOrNew([
+	//                     'weekly_timesheet_id' => $weeklyTimesheet->id,
+	//                     'date' => $date,
+	//                     'task_id' => $taskId
+	//                 ]);
+
+	//                 $weeklyTimesheetEntry->hours = $hours[$key][$key2];
+	//                 $weeklyTimesheetEntry->memo = $memo[$key][$key2];
+	//                 $weeklyTimesheetEntry->save();
+
+	//                 if ($weeklyTimesheet->status == 'pending' && $weeklyTimesheetEntry->hours > 0) {
+	//                     $timeLog = new ProjectTimeLog();
+	//                     $timeLog->task_id = $taskId;
+	//                     $timeLog->user_id = $weeklyTimesheet->user_id;
+	//                     $timeLog->total_hours = $weeklyTimesheetEntry->hours;
+	//                     $timeLog->total_minutes = $weeklyTimesheetEntry->hours * 60;
+	//                     $timeLog->start_time = Carbon::parse($date)->format('Y-m-d H:i:s');
+	//                     $timeLog->end_time = Carbon::parse($date)->addHours($weeklyTimesheetEntry->hours)->format('Y-m-d H:i:s');
+	//                     $timeLog->weekly_timesheet_id = $weeklyTimesheet->id;
+	//                     $timeLog->memo = $memo[$key][$key2];
+	//                     $timeLog->save();
+	//                 }
+	//             }
+	//         }
+
+	//         if ($weeklyTimesheet->status == 'pending') {
+	//             SubmitWeeklyTimesheet::dispatch($weeklyTimesheet);
+	//             return Reply::redirect(route('weekly-timesheets.index'), __('messages.recordSaved'));
+	//         }
+
+	//         return Reply::success(__('messages.recordSaved'));
+	//     }
 
 
+
+	// end new code
 
 
 
 
-    public function changeStatus(Request $request)
-    {
-        $this->validate($request, [
-            'reason' => 'required_if:status,draft'
-        ], [
-        'reason.required_if' => ':attribute ' . __('app.required')
-        ]);
 
-        $weeklyTimesheet = WeeklyTimesheet::find($request->timesheetId);
-        $weeklyTimesheet->status = $request->status;
-        $weeklyTimesheet->approved_by = user()->id;
-        $weeklyTimesheet->reason = $request->has('reason') ? $request->reason : null;
-        $weeklyTimesheet->save();
 
-        if ($request->status == 'approved') {
-            ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->update(['approved' => 1]);
+	public function changeStatus(Request $request)
+	{
+		$this->validate($request, [
+			'reason' => 'required_if:status,draft'
+		], [
+		'reason.required_if' => ':attribute ' . __('app.required')
+		]);
 
-            WeeklyTimesheetApprovedEvent::dispatch($weeklyTimesheet);
-        }
+		$weeklyTimesheet = WeeklyTimesheet::find($request->timesheetId);
+		$weeklyTimesheet->status = $request->status;
+		$weeklyTimesheet->approved_by = user()->id;
+		$weeklyTimesheet->reason = $request->has('reason') ? $request->reason : null;
+		$weeklyTimesheet->save();
 
-        if ($request->status == 'draft') {
-            ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
-                    
-            WeeklyTimesheetDraftEvent::dispatch($weeklyTimesheet);
-        }
+		if ($request->status == 'approved') {
+			ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->update(['approved' => 1]);
 
-        return Reply::success(__('messages.recordSaved'));
-    }
+			WeeklyTimesheetApprovedEvent::dispatch($weeklyTimesheet);
+		}
 
-    public function show($id)
-    {
-        $this->weeklyTimesheet = WeeklyTimesheet::findOrFail($id);
+		if ($request->status == 'draft') {
+			ProjectTimeLog::where('weekly_timesheet_id', $weeklyTimesheet->id)->delete();
+					
+			WeeklyTimesheetDraftEvent::dispatch($weeklyTimesheet);
+		}
 
-        $this->weekStartDate = $this->weeklyTimesheet->week_start_date;
-        $this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
-        $this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate);
+		return Reply::success(__('messages.recordSaved'));
+	}
 
-        $weekDates = [];
+	public function show($id)
+	{
+		$this->weeklyTimesheet = WeeklyTimesheet::findOrFail($id);
 
-        foreach($this->weekPeriod as $date) {
-            $dateFormatted = $date->format('Y-m-d');
-            $weekDates[] = $dateFormatted;
-        }
+		$this->weekStartDate = $this->weeklyTimesheet->week_start_date;
+		$this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
+		$this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate);
 
-        $this->weekDates = $weekDates;
+		$weekDates = [];
 
-        if (request()->ajax()) {
-            $this->pageTitle = __('app.menu.weeklyTimesheets') . ' ' . __('app.details');
-            $view = 'weekly-timesheets.ajax.show';
+		foreach($this->weekPeriod as $date) {
+			$dateFormatted = $date->format('Y-m-d');
+			$weekDates[] = $dateFormatted;
+		}
 
-            return $this->returnAjax($view);
-        }
+		$this->weekDates = $weekDates;
 
-        $this->view = 'weekly-timesheets.ajax.show';
+		if (request()->ajax()) {
+			$this->pageTitle = __('app.menu.weeklyTimesheets') . ' ' . __('app.details');
+			$view = 'weekly-timesheets.ajax.show';
 
-        return view('weekly-timesheets.show', $this->data);
-    }
+			return $this->returnAjax($view);
+		}
 
-    public function showRejectModal(Request $request)
-    {
-        $this->weeklyTimesheet = WeeklyTimesheet::findOrFail($request->timesheet_id);
-        return view('weekly-timesheets.reject_modal', $this->data);
-    }
+		$this->view = 'weekly-timesheets.ajax.show';
 
-    public function edit($id)
-    {
-        $this->weeklyTimesheet = WeeklyTimesheet::findOrFail($id);
+		return view('weekly-timesheets.show', $this->data);
+	}
 
-        
+	public function showRejectModal(Request $request)
+	{
+		$this->weeklyTimesheet = WeeklyTimesheet::findOrFail($request->timesheet_id);
+		return view('weekly-timesheets.reject_modal', $this->data);
+	}
 
-        $this->weekStartDate = $this->weeklyTimesheet->week_start_date;
-        $this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
-        $this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate); // Get All Dates from start to end date
-        
-        $this->weekTimesheet = WeeklyTimesheet::where('user_id', user()->id)
-        ->whereDate('week_start_date', $this->weekStartDate)
-        ->first();
+	public function edit($id)
+	{
+		$this->weeklyTimesheet = WeeklyTimesheet::findOrFail($id);
 
-        $weekDates = [];
+		
 
-        foreach($this->weekPeriod as $date) {
-            $dateFormatted = $date->format('Y-m-d');
-            $weekDates[] = $dateFormatted;
-        }
+		$this->weekStartDate = $this->weeklyTimesheet->week_start_date;
+		$this->weekEndDate = $this->weekStartDate->copy()->addDays(6);
+		$this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekEndDate); // Get All Dates from start to end date
+		
+		$this->weekTimesheet = WeeklyTimesheet::where('user_id', user()->id)
+		->whereDate('week_start_date', $this->weekStartDate)
+		->first();
 
-        $tasks = Task::leftJoin('task_users', 'task_users.task_id', '=', 'tasks.id')
-        ->where('task_users.user_id', '=', user()->id)
-        ->where(function ($query) {
-            return $query->whereBetween(DB::raw('DATE(tasks.`start_date`)'), [$this->weekStartDate, $this->weekEndDate])
-            ->orWhereBetween(DB::raw('DATE(tasks.`due_date`)'), [$this->weekStartDate, $this->weekEndDate]);
-        })
-        ->select('tasks.id', 'tasks.heading')->get();
+		$weekDates = [];
 
-        $this->tasksForWeek = $tasks;
-        $this->weekDates = $weekDates;
+		foreach($this->weekPeriod as $date) {
+			$dateFormatted = $date->format('Y-m-d');
+			$weekDates[] = $dateFormatted;
+		}
 
-        $this->view = 'weekly-timesheets.ajax.week_summary_data';
+		$tasks = Task::leftJoin('task_users', 'task_users.task_id', '=', 'tasks.id')
+		->where('task_users.user_id', '=', user()->id)
+		->where(function ($query) {
+			return $query->whereBetween(DB::raw('DATE(tasks.`start_date`)'), [$this->weekStartDate, $this->weekEndDate])
+			->orWhereBetween(DB::raw('DATE(tasks.`due_date`)'), [$this->weekStartDate, $this->weekEndDate]);
+		})
+		->select('tasks.id', 'tasks.heading')->get();
 
-        $now = now();
-        $this->year = $now->format('Y');
-        $this->month = $now->format('m');
-        return view('weekly-timesheets.edit', $this->data);
+		$this->tasksForWeek = $tasks;
+		$this->weekDates = $weekDates;
 
-    }
+		$this->view = 'weekly-timesheets.ajax.week_summary_data';
 
+		$now = now();
+		$this->year = $now->format('Y');
+		$this->month = $now->format('m');
+		return view('weekly-timesheets.edit', $this->data);
+
+	}
 }

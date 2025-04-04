@@ -781,6 +781,7 @@ class TimelogController extends AccountBaseController
 
     public function export()
     {
+
         abort_403(!canDataTableExport());
 
         return Excel::download(new EmployeeTimelogs, 'timelogs.xlsx');
