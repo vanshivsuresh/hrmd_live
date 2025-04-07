@@ -92,6 +92,7 @@ class AttendanceController extends AccountBaseController
 
     public function summaryData($request)
     {
+
         $viewEmployeePermission = user()->permission('view_employees');
         $employees = User::with(
             [
@@ -176,6 +177,7 @@ class AttendanceController extends AccountBaseController
         $leaveReasons = [];
 
         $this->daysInMonth = Carbon::parse('01-' . $request->month . '-' . $request->year)->daysInMonth;
+
         $now = now()->timezone($this->company->timezone);
         $requestedDate = Carbon::parse(Carbon::parse('01-' . $request->month . '-' . $request->year))->endOfMonth();
 
@@ -186,6 +188,8 @@ class AttendanceController extends AccountBaseController
             $dataTillToday = array_fill(1, $now->copy()->format('d'), 'Absent');
             $dataTillRequestedDate = array_fill(1, (int)$this->daysInMonth, 'Absent');
             $daysTofill = ((int)$this->daysInMonth - (int)$now->copy()->format('d'));
+
+
 
             if (($now->copy()->format('d') != $this->daysInMonth) && !$requestedDate->isPast()) {
                 $dataFromTomorrow = array_fill($now->copy()->addDay()->format('d'), (($daysTofill >= 0 ? $daysTofill : 0)), '-');
@@ -356,6 +360,8 @@ class AttendanceController extends AccountBaseController
      */
     public function show($id)
     {
+        
+
         $viewPermission = user()->permission('view_attendance');
         $attendance = Attendance::with('user', 'user.employeeDetail', 'location')->findOrFail($id);
 
@@ -739,6 +745,7 @@ class AttendanceController extends AccountBaseController
 
     public function employeeData(Request $request, $startDate = null, $endDate = null, $userId = null)
     {
+        
         // todo ::~
         $ant = []; // Array For attendance Data indexed by similar date
         $dateWiseData = []; // Array For Combine Data
@@ -753,7 +760,12 @@ class AttendanceController extends AccountBaseController
 
         $totalWorkingDays = $startDate->daysInMonth;
 
-        $totalWorkingDays = $totalWorkingDays - count($holidays);
+        // echo "$totalWorkingDays";
+        // exit;
+
+        // $totalWorkingDays = $totalWorkingDays - count($holidays);
+        
+
         $daysPresent = Attendance::countDaysPresentByUser($startDate, $endDate, $userId);
         $daysLate = Attendance::countDaysLateByUser($startDate, $endDate, $userId);
         $halfDays = Attendance::countHalfDaysByUser($startDate, $endDate, $userId);

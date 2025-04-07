@@ -19,6 +19,7 @@
     <link type="text/css" rel="stylesheet" media="all" href="{{ asset('css/main.css') }}">
 
     <title>{{ $globalSetting->global_app_name ?? $globalSetting->app_name }}</title>
+    <!-- <title>HrmsVanshiv</title> -->
 
 
     @stack('styles')

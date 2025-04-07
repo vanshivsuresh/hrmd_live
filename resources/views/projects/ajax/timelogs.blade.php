@@ -27,9 +27,17 @@ $addTimelogPermission = user()->permission('add_timelogs');
                                 @if ($employees->count() > 1 || in_array('admin', user_roles()))
                                     <option value="all">@lang('app.all')</option>
                                 @endif
-                                @foreach ($employees as $employee)
+                                <!-- @foreach ($employees as $employee)
                                         <x-user-option :user="$employee" :selected="request('assignee') == 'me' && $employee->id == user()->id"/>
+                                @endforeach -->
+                                
+                                @forelse($project->members as $key => $member)
+                                    <x-user-option 
+                                        :user="$member->user" 
+                                        :selected="request('assignee') == 'me' && $member->id == user()->id" 
+                                    />
                                 @endforeach
+
                             </select>
                     </div>
                     <!-- Employees END -->
