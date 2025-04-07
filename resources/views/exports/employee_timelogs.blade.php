@@ -7,12 +7,14 @@
 <table>
     <tr>
         <th>@lang('app.name')</th>
+        
         <th align="center">@lang('modules.timeLogs.totalWorkingHours')</th>
         <th align="center">@lang('modules.timeLogs.totalLoggedHours')</th>
         <th align="center">@lang('modules.timeLogs.totalNotLoggedHours')</th>
         <th align="center">@lang('modules.timeLogs.leavesTaken')</th>
         <th align="center">@lang('modules.timeLogs.holiday')</th>
-        <!-- <th align="center">@lang('modules.timeLogs.memo')</th> -->
+
+        <th align="center">@lang('modules.timeLogs.description')</th>
     </tr>
     @foreach ($employees as $item)
         @php
@@ -39,9 +41,10 @@
                     {{ (($totalUntrackedHours % 60) > 0 ? ($totalUntrackedHours % 60) .' minutes' : '' }}
                 @endif
             </td>
+            
             <td align="center">{{ optional($item)->total_leaves ?? 0 }}</td>
             <td align="center">{{ $item->holidays->count() }}</td>
-            <!-- <td align="center">{{ $item->memo ?? 'N/A' }}</td> -->
+           
         </tr>
     @endforeach
-</table>
+</table> 

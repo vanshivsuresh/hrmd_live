@@ -390,6 +390,7 @@ class EmployeesDataTable extends BaseDataTable
             $users = $users->where(function ($query) {
                 $query->where('users.name', 'like', '%' . request('searchText') . '%')
                     ->orWhere('users.email', 'like', '%' . request('searchText') . '%')
+                    // ->orWhere('users.contractor_name', 'like', '%' . request('searchText') . '%')
                     ->orWhere('employee_details.employee_id', 'like', '%' . request('searchText') . '%');
             });
         }

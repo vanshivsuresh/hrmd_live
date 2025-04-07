@@ -112,7 +112,9 @@ class TimeLogsDataTable extends BaseDataTable
         });
         $datatables->addColumn('employee_name', fn($row) => $row->user->name);
         $datatables->editColumn('name', fn($row) => view('components.employee', ['user' => $row->user]));
-        $datatables->editColumn('start_time', fn($row) => $row->start_time->timezone($this->company->timezone)->translatedFormat($this->company->date_format . ' ' . $this->company->time_format));
+        // $datatables->editColumn('start_time', fn($row) => $row->start_time->timezone($this->company->timezone)->translatedFormat($this->company->date_format . ' ' . $this->company->time_format));
+        $datatables->editColumn('start_time', fn($row) => $row->start_time->timezone($this->company->timezone)->translatedFormat($this->company->date_format));
+
         $datatables->editColumn('end_time', function ($row) {
             if (!is_null($row->end_time)) {
                 return $row->end_time->timezone($this->company->timezone)->translatedFormat($this->company->date_format . ' ' . $this->company->time_format);
@@ -131,23 +133,26 @@ class TimeLogsDataTable extends BaseDataTable
                 : $row->total_minutes - $row->breaks->sum('total_minutes');
 
             // Convert total minutes to hours and minutes
-            $hours = intdiv($totalMinutes, 60);
-            $minutes = $totalMinutes % 60;
+            // $hours = intdiv($totalMinutes, 60);
+            // $minutes = $totalMinutes % 60;
 
             // Format output based on hours and minutes
-            $formattedTime = $hours > 0
-                ? $hours . 'h' . ($minutes > 0 ? ' ' . sprintf('%02dm', $minutes) : '')
-                : ($minutes > 0 ? sprintf('%dm', $minutes) : '0s');
+            // $formattedTime = $hours > 0
+            //     ? $hours . 'h' . ($minutes > 0 ? ' ' . sprintf('%02dm', $minutes) : '')
+            //     : ($minutes > 0 ? sprintf('%dm', $minutes) : '0s');
 
             // Build timeLog with conditional icons
-            $timeLog = '<span data-trigger="hover" data-toggle="popover" data-content="' . $row->memo . '">' . $formattedTime . '</span>';
-            if (is_null($row->end_time)) {
-                $timeLog .= ' <i data-toggle="tooltip" data-original-title="' . __('app.active') . '" class="fa fa-hourglass-start"></i>';
-            } elseif ($row->approved) {
-                $timeLog .= ' <i data-toggle="tooltip" data-original-title="' . __('app.approved') . '" class="fa fa-check-circle text-primary"></i>';
-            }
+            // $timeLog = '<span data-trigger="hover" data-toggle="popover" data-content="' . $row->memo . '">' . $formattedTime . '</span>';
+            // if (is_null($row->end_time)) {
+            //     $timeLog .= ' <i data-toggle="tooltip" data-original-title="' . __('app.active') . '" class="fa fa-hourglass-start"></i>';
+            // } elseif ($row->approved) {
+            //     $timeLog .= ' <i data-toggle="tooltip" data-original-title="' . __('app.approved') . '" class="fa fa-check-circle text-primary"></i>';
+            // }
 
-            return $timeLog;
+            // return $timeLog;
+
+            $totalHours = $totalMinutes / 60;
+            return number_format($totalHours, 2, '.', '');
         });
         $datatables->editColumn('earnings', function ($row) {
 
@@ -364,18 +369,21 @@ class TimeLogsDataTable extends BaseDataTable
                 'orderable' => false,
                 'searchable' => false
             ],
-            '#' => ['data' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false, 'visible' => !showId(), 'title' => '#'],
-            __('app.id') => ['data' => 'id', 'name' => 'id', 'title' => __('app.id'), 'visible' => showId()],
-            __('modules.taskCode') => ['data' => 'short_code', 'name' => 'project_short_code', 'title' => __('modules.taskCode')],
+            // '#' => ['data' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false, 'visible' => !showId(), 'title' => '#'],
+            // __('app.id') => ['data' => 'id', 'name' => 'id', 'title' => __('app.id'), 'visible' => showId()],
+            // __('modules.taskCode') => ['data' => 'short_code', 'name' => 'project_short_code', 'title' => __('modules.taskCode')],
+            __('modules.timeLogs.startTime') => ['data' => 'start_time', 'name' => 'start_time', 'title' => __('modules.timeLogs.startTime')],
             __('app.task') => ['data' => 'project_name', 'name' => 'tasks.heading', 'exportable' => false, 'width' => '200', 'title' => __('app.task')],
             __('app.tasks') => ['data' => 'task_name', 'visible' => false, 'name' => 'task_name', 'title' => __('app.tasks')],
             __('app.project') => ['data' => 'task_project_name', 'visible' => false, 'name' => 'task_project_name', 'title' => __('app.project')],
+            __('modules.timeLogs.memo') => ['data' => 'memo', 'name' => 'memo', 'title' => __('modules.timeLogs.memo'), 'exportable' => true, 'visible' => true],
             __('app.employee') => ['data' => 'name', 'name' => 'users.name', 'exportable' => false, 'title' => __('app.employee')],
             __('app.name') => ['data' => 'employee_name', 'name' => 'name', 'visible' => false, 'title' => __('app.name')],
-            __('modules.timeLogs.startTime') => ['data' => 'start_time', 'name' => 'start_time', 'title' => __('modules.timeLogs.startTime')],
-            __('modules.timeLogs.endTime') => ['data' => 'end_time', 'name' => 'end_time', 'title' => __('modules.timeLogs.endTime')],
+            // __('modules.timeLogs.startTime') => ['data' => 'start_time', 'name' => 'start_time', 'title' => __('modules.timeLogs.startTime')],
+            // __('modules.timeLogs.endTime') => ['data' => 'end_time', 'name' => 'end_time', 'title' => __('modules.timeLogs.endTime')],
             __('modules.timeLogs.totalHours') => ['data' => 'total_hours', 'name' => 'total_hours', 'title' => __('modules.timeLogs.totalHours')],
-            __('app.earnings') => ['data' => 'earnings', 'name' => 'earnings', 'title' => __('app.earnings'), 'visible' => ($this->viewTimelogEarningsPermission == 'all'), 'exportable' => ($this->viewTimelogEarningsPermission == 'all')]
+            // __('app.earnings') => ['data' => 'earnings', 'name' => 'earnings', 'title' => __('app.earnings'), 'visible' => ($this->viewTimelogEarningsPermission == 'all'), 'exportable' => ($this->viewTimelogEarningsPermission == 'all')],
+            
         ];
 
         $action = [

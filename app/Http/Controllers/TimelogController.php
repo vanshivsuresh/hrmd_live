@@ -38,12 +38,14 @@ class TimelogController extends AccountBaseController
 
     public function index(TimeLogsDataTable $dataTable)
     {
+        
         $viewPermission = $this->viewTimelogPermission;
         abort_403(!in_array($viewPermission, ['all', 'added', 'owned', 'both']));
 
         if (!request()->ajax()) {
             $this->employees = User::allEmployees(null, true, ($viewPermission == 'all' ? 'all' : null));
             $this->projects = Project::allProjects();
+           
         }
 
         $this->timelogMenuType = 'index';
@@ -54,6 +56,7 @@ class TimelogController extends AccountBaseController
 
     public function calculateTime(Request $request)
     {
+
         // Get the start and end date/time values
         $startDate = $request->start_date;
         $endDate = $request->end_date;
@@ -102,6 +105,7 @@ class TimelogController extends AccountBaseController
 
     public function applyQuickAction(Request $request)
     {
+       
         switch ($request->action_type) {
         case 'delete':
             $this->deleteRecords($request);
@@ -135,6 +139,8 @@ class TimelogController extends AccountBaseController
 
     public function create()
     {
+        // echo "create method is called!";
+        // exit;
         $this->pageTitle = __('modules.timeLogs.logTime');
         $this->addTimelogPermission = user()->permission('add_timelogs');
         session(['add_timelogs_permission' => $this->addTimelogPermission]);
@@ -179,6 +185,8 @@ class TimelogController extends AccountBaseController
 
     public function store(StoreTimeLog $request)
     {
+        
+    
         $startDateTime = Carbon::createFromFormat($this->company->date_format, $request->start_date, $this->company->timezone)->format('Y-m-d') . ' ' . Carbon::createFromFormat($this->company->time_format, $request->start_time)->format('H:i:s');
         $startDateTime = Carbon::parse($startDateTime, $this->company->timezone)->setTimezone('UTC');
 
@@ -367,6 +375,7 @@ class TimelogController extends AccountBaseController
 
     public function show($id)
     {
+        
         $this->pageTitle = __('app.menu.timeLogs');
         $this->editTimelogPermission = user()->permission('edit_timelogs');
         $this->timeLog = ProjectTimeLog::with('user', 'user.employeeDetail', 'project', 'task','breaks', 'activeBreak')->findOrFail($id)->withCustomFields();
@@ -534,6 +543,8 @@ class TimelogController extends AccountBaseController
         $timeLog->total_minutes = $timeLog->end_time->diffInMinutes($timeLog->start_time);
         $timeLog->edited_by_user = $this->user->id;
         $timeLog->memo = $request->memo;
+
+
         $timeLog->save();
 
         // Stop breaktime if active
@@ -628,6 +639,7 @@ class TimelogController extends AccountBaseController
 
     public function byEmployee()
     {
+       
         $viewPermission = $this->viewTimelogPermission;
         abort_403(!in_array($viewPermission, ['all', 'added', 'owned', 'both']));
 
@@ -636,6 +648,7 @@ class TimelogController extends AccountBaseController
         $this->timeLogProjects = $this->projects;
         $this->tasks = Task::all();
         $this->timeLogTasks = $this->tasks;
+        // $this->description = "memo text";
 
         $this->activeTimers = $this->activeTimerCount;
         $this->startDate = now()->startOfMonth()->format(company()->date_format);
@@ -649,6 +662,7 @@ class TimelogController extends AccountBaseController
 
     public function employeeData(Request $request)
     {
+    
         $employee = $request->employee;
         $projectId = $request->projectID;
         $this->viewTimelogPermission = user()->permission('view_timelogs');
@@ -739,6 +753,7 @@ class TimelogController extends AccountBaseController
 
     public function userTimelogs(Request $request)
     {
+        
         $employee = $request->employee;
         $projectId = $request->projectID;
 
@@ -780,10 +795,10 @@ class TimelogController extends AccountBaseController
     }
 
     public function export()
+
     {
-
+        
         abort_403(!canDataTableExport());
-
         return Excel::download(new EmployeeTimelogs, 'timelogs.xlsx');
     }
 

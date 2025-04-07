@@ -32,7 +32,9 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
     private $viewTimelogPermission;
 
     public function __construct()
-    {
+    { 
+
+
         parent::__construct();
         $this->middleware(function ($request, $next) {
             abort_403(!in_array('timelogs', $this->user->modules));
@@ -41,12 +43,13 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
         });
     }
 
-    public function view(): View
+
+   public function view(): View
     {
+
+
         $this->startDate = $startDate = Carbon::createFromFormat(company()->date_format, urldecode(request()->startDate))->toDateString();
-        /** @phpstan-ignore-line */
         $this->endDate = $endDate = Carbon::createFromFormat(company()->date_format, urldecode(request()->endDate))->toDateString();
-        /** @phpstan-ignore-line */
         $employee = request()->employee;
         $projectId = request()->projectID;
         $this->viewTimelogPermission = user()->permission('view_timelogs');
@@ -104,13 +107,18 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
             $employee->total_weekends = $this->countWeekends($startDate, $endDate);
             $employee->total_working_days = $employee->total_days - $employee->total_weekends - $employee->holidays->count();
             $employee->total_hours = $this->calculateTotalHours($employee, $startDate, $endDate);
+            // $employee->description = "memo text";
         }
-
+    
         return view('exports.employee_timelogs', $this->data);
-    }
+    } 
+
+
 
     public function calculateTotalHours($user, $startDate, $endDate)
     {
+
+
         $totalHours = 0;
 
         $start = Carbon::parse($startDate);
@@ -171,7 +179,11 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
 
     // phpcs:ignore
     public function styles(Worksheet $sheet)
+
     {
+       
+
+        
         return [
             1 => ['font' => ['bold' => true, 'size' => 14]],
             3 => ['font' => ['bold' => true]],
@@ -180,6 +192,9 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
 
     public function registerEvents(): array
     {
+       
+
+       
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
@@ -260,6 +275,9 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
 
     private function countTotalDays($startDate, $endDate)
     {
+        
+
+        
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
         return $start->diffInDays($end) + 1;
@@ -267,6 +285,9 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
 
     private function countWeekends($startDate, $endDate)
     {
+        
+
+        
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
         $count = 0;
@@ -283,6 +304,8 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
 
     private function countHolidays($user, $startDate, $endDate)
     {
+        
+
         $holidays = Holiday::orderBy('date', 'ASC');
 
         $holidays->where(function ($query) use ($user) {

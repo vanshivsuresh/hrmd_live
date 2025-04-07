@@ -24,7 +24,7 @@
 	<input type="hidden" name="status" id="status" value="{{ $weekTimesheet ? $weekTimesheet->status : 'draft' }}">
 	@csrf
 	<div class="table-responsive">
-		<x-table class="table-bordered mt-3 table-hover" headType="thead-light" id="weekly-timesheet-table" >
+		<x-table class="table-bordered mt-3 table-hover" headType="thead-light" id="weekly-timesheet-table">
 			<x-slot name="thead">
 				<th class="px-2 fixed-column font-weight-semibold f-16" style="vertical-align: middle;"><span class="f-16">@lang('app.task')</span></th>
 				@foreach ($weekPeriod->toArray() as $date)
@@ -164,12 +164,22 @@
 			return false;
 		});
 
-		$('#weekly-timesheet-table').on('keyup', '.week-hours', function () {
-			let totalHours = 0;
-			let index = $(this).closest('td').data('index');
+        
+        $('.submit-timesheet').click(function (e) {
+            // $('#status').val($(this).data('status'));
 
-			$('#weekly-timesheet-table .date-index-' + index).each(function () {
-				let currentHours = parseFloat($(this).find('.week-hours').val());
+            // new code
+            var status = $(this).data('status');
+            var confirmationMessage = '';
+
+            if (status === 'draft') {
+                confirmationMessage = "{{ __('messages.saveWeeklyTimesheetConfirmation') }}";
+            } else if (status === 'pending') {
+                confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
+            }
+            $('#status').val(status);
+
+            // end new code
 
 				if (isNaN(currentHours) || currentHours < 0) {
 					$(this).find('.week-hours').val(0);
@@ -184,108 +194,118 @@
 
 			$('#total-hours-' + index).text(totalHours);
 
-			if (totalHours > 24) {
-				$('#total-hours-' + index).html('<span class="text-danger">' + totalHours + '</span>');
-			}
-		});
+        if($('#status').val() == 'draft') {
+            $('.week-task, .week-hours').prop('disabled', false);
+        } else {
+            $('.week-task, .week-hours').prop('disabled', true);
+        }
 
-		function validateWeekHours() {
-			let isValid = false;
 
-			$('.week-hours').each(function () {
-				let value = $(this).val().trim();
-				if (value !== "" && !isNaN(value) && parseFloat(value) >= 0) {
-					isValid = true;
-					return false; // Break loop if at least one valid entry is found
-				}
-			});
+        // $('.submit-timesheet').click(function (e) {
+		// 	var input = $("input[name='hours[0][]']");
+		// 	var errorSpan = input.next(".error");
+		// 	var value = input.val().trim();
+		// 	var isValid = true;
+		// 	var errorMessage = "";
 
-			return isValid;
-		}
+		// 	if (value === "") {
+		// 		errorMessage = "This field is required.";
+		// 		isValid = false;
+		// 	} else if (isNaN(value)) {
+		// 		errorMessage = "Please enter a valid number.";
+		// 		isValid = false;
+		// 	} else if (value < 0) {
+		// 		errorMessage = "Minimum value allowed is 0.";
+		// 		isValid = false;
+		// 	} else if (value > 24) {
+		// 		errorMessage = "Maximum value allowed is 24.";
+		// 		isValid = false;
+		// 	}
 
-		function validateWeekMemo() {
-			let isValid = false;
+		// 	if (!isValid) {
+		// 		$("<span class='error-message' style='color:red; font-size:14px;'>"+errorMessage+"</span>").insertAfter($("input[name='hours[0][]']"));
+		// 		return false;
+		// 	}
 
-			$('.week-memo').each(function () {
-				let value = $(this).val().trim();
-				if (value !== "") {
-					isValid = true;
-					return false; // Break loop if at least one valid memo is found
-				}
-			});
+		// 	var textarea = $("textarea[name='memo[0][]']");
+		// 	var errorSpan = textarea.next(".error");
+		// 	var value = textarea.val().trim();
+		// 	var isValid = true;
+		// 	var errorMessage = "";
 
-			return isValid;
-		}
+		// 	if (value === "") {
+		// 		errorMessage = "This field is required.";
+		// 		isValid = false;
+		// 	} else if (value.length < 5) {
+		// 		errorMessage = "Memo must be at least 5 characters long.";
+		// 		isValid = false;
+		// 	}
 
-		$('.submit-timesheet').click(function (e) {
-			let isHoursValid = validateWeekHours();
-			let isMemoValid = validateWeekMemo();
+		// 	if (!isValid) {
+		// 		$("<span class='error-message' style='color:red; font-size:14px;'>"+errorMessage+"</span>").insertAfter($("textarea[name='memo[0][]']"));
+		// 		return false;
+		// 	}
 
-			if (!isHoursValid || !isMemoValid) {
-				e.preventDefault();
-				Swal.fire({
-					icon: 'error',
-					title: 'Validation Error',
-					text: 'At least one "week-hours" field and one "week-memo" field must be filled.',
-					confirmButtonText: 'OK'
-				});
-				return false;
-			}
+		// 	// $('#status').val($(this).data('status'));
+		// 	// new code
+		// 	var status = $(this).data('status');
+		// 	var confirmationMessage = '';
 
-			var status = $(this).data('status');
-			var confirmationMessage = '';
+		// 	if (status === 'draft') {
+		// 		confirmationMessage = "{{ __('messages.saveWeeklyTimesheetConfirmation') }}";
+		// 	} else if (status === 'pending') {
+		// 		confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
+		// 	}
+		// 	$('#status').val(status);
+		// 	// end new code
 
-			if (status === 'draft') {
-				confirmationMessage = "{{ __('messages.saveWeeklyTimesheetConfirmation') }}";
-			} else if (status === 'pending') {
-				confirmationMessage = "{{ __('messages.submitWeeklyTimesheetConfirmation') }}";
-			}
-			$('#status').val(status);
+		// 	Swal.fire({
+		// 		title: "@lang('messages.sweetAlertTitle')",
+		// 		// text: "@lang('messages.submitWeeklyTimesheetConfirmation')",
+		// 		text: confirmationMessage,
+		// 		icon: 'warning',
+		// 		showCancelButton: true,
+		// 		focusConfirm: false,
+		// 		confirmButtonText: "@lang('messages.confirm')",
+		// 		cancelButtonText: "@lang('app.cancel')",
+		// 		customClass: {
+		// 			confirmButton: 'btn btn-primary mr-3',
+		// 			cancelButton: 'btn btn-secondary'
+		// 		},
+		// 		showClass: {
+		// 			popup: 'swal2-noanimation',
+		// 			backdrop: 'swal2-noanimation'
+		// 		},
+		// 		buttonsStyling: false
+		// 	}).then((result) => {
+		// 		if (result.isConfirmed) {
+		// 			$.easyAjax({
+		// 				url: "{{ route('weekly-timesheets.store') }}",
+		// 				type: 'POST',
+		// 				container: '#weekly-timesheet-form',
+		// 				blockUI: true,
+		// 				buttonSelector: '#submit-timesheet',
+		// 				disableButton: true,
+		// 				data: $('#weekly-timesheet-form').serialize(),
+		// 				success: function (response) {
+		// 					console.log(response);
+		// 				}
+		// 			});
+		// 		}
+		// 	});
+		// });
 
-			Swal.fire({
-				title: "@lang('messages.sweetAlertTitle')",
-				text: confirmationMessage,
-				icon: 'warning',
-				showCancelButton: true,
-				focusConfirm: false,
-				confirmButtonText: "@lang('messages.confirm')",
-				cancelButtonText: "@lang('app.cancel')",
-				customClass: {
-					confirmButton: 'btn btn-primary mr-3',
-					cancelButton: 'btn btn-secondary'
-				},
-				showClass: {
-					popup: 'swal2-noanimation',
-					backdrop: 'swal2-noanimation'
-				},
-				buttonsStyling: false
-			}).then((result) => {
-				if (result.isConfirmed) {
-					$.easyAjax({
-						url: "{{ route('weekly-timesheets.store') }}",
-						type: 'POST',
-						container: '#weekly-timesheet-form',
-						blockUI: true,
-						buttonSelector: '#submit-timesheet',
-						disableButton: true,
-						data: $('#weekly-timesheet-form').serialize(),
-						success: function (response) {
-							console.log(response);
-						}
-					});
-				}
-			});
-		});
+		// $('#weekly-timesheet-table').on('click', '.remove-task', function (e) {
+		// 	e.preventDefault();
+		// 	$(this).closest('tr').remove();
+		// });
 
-		$('#weekly-timesheet-table').on('click', '.remove-task', function (e) {
-			e.preventDefault();
-			$(this).closest('tr').remove();
-		});
+		// if($('#status').val() == 'draft') {
+		// 	$('.week-task, .week-hours').prop('disabled', false);
+		// } else {
+		// 	$('.week-task, .week-hours').prop('disabled', true);
+		// }
 
-		if($('#status').val() == 'draft') {
-			$('.week-task, .week-hours, .week-memo').prop('disabled', false);
-		} else {
-			$('.week-task, .week-hours, .week-memo').prop('disabled', true);
-		}
-	});
+
+    });
 </script>
