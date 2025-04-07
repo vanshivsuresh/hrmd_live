@@ -5,7 +5,7 @@
             <div class="d-block ">
                 <h5 class="f-15 f-w-500 mb-20 text-darkest-grey"> @lang('app.menu.projects') </h5>
                 <div class="d-flex">
-                    <a href="{{ route('projects.index') . '?assignee=me&status=in progress' }}">
+                    <a href="{{ route('projects.index') . '?assignee=me&status=In progress' }}">
                         <p class="mb-0 f-21 font-weight-bold text-blue d-grid mr-5">
                             {{ $totalProjects }}<span
                                 class="f-12 font-weight-normal text-lightest">@lang('app.inProgress')</span>

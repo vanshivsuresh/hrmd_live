@@ -398,7 +398,7 @@ class Project extends BaseModel
 
     public function scopeInProcess($query)
     {
-        return $query->where('status', 'in progress');
+        return $query->where('status', 'In progress');
     }
 
     public function scopeOnHold($query)
