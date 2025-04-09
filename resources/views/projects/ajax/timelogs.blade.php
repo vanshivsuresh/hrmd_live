@@ -17,22 +17,30 @@
 
 		<div class="d-flex justify-content-between">
 
-			<form action="" class="flex-grow-1 " id="filter-form">
-				<div class="d-block d-lg-flex d-md-flex my-3">
-					<!-- Employees START -->
-					<div class="select-box py-2 px-0 mr-3">
-						<x-forms.label :fieldLabel="__('app.employee')" fieldId="employee" />
-							<select class="form-control select-picker" name="employee" id="employee" data-live-search="true"
-									data-size="8">
-								@if ($employees->count() > 1 || in_array('admin', user_roles()))
-									<option value="all">@lang('app.all')</option>
-								@endif
-								@forelse($project->members as $key=>$member)
-										<x-user-option :user="$member->user" :selected="request('assignee') == 'me' && $member->id == user()->id"/>
-								@endforeach
-							</select>
-					</div>
-					<!-- Employees END -->
+            <form action="" class="flex-grow-1 " id="filter-form">
+                <div class="d-block d-lg-flex d-md-flex my-3">
+                    <!-- Employees START -->
+                    <div class="select-box py-2 px-0 mr-3">
+                        <x-forms.label :fieldLabel="__('app.employee')" fieldId="employee" />
+                            <select class="form-control select-picker" name="employee" id="employee" data-live-search="true"
+                                    data-size="8">
+                                @if ($employees->count() > 1 || in_array('admin', user_roles()))
+                                    <option value="all">@lang('app.all')</option>
+                                @endif
+                                <!-- @foreach ($employees as $employee)
+                                        <x-user-option :user="$employee" :selected="request('assignee') == 'me' && $employee->id == user()->id"/>
+                                @endforeach -->
+                                
+                                @forelse($project->members as $key => $member)
+                                    <x-user-option 
+                                        :user="$member->user" 
+                                        :selected="request('assignee') == 'me' && $member->id == user()->id" 
+                                    />
+                                @endforeach
+
+                            </select>
+                    </div>
+                    <!-- Employees END -->
 
 					<!-- STATUS START -->
 					<div class="select-box py-2 px-0 mr-3">
