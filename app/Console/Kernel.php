@@ -40,11 +40,7 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Console\Commands\SuperAdmin\FreeLicenceRenew;
 use App\Console\Commands\SuperAdmin\TrialExpire;
 
-class Kernel extends ConsoleKernel
-{
-
-
-
+class Kernel extends ConsoleKernel {
     /**
      * The Artisan commands provided by your application.
      *
@@ -97,7 +93,6 @@ class Kernel extends ConsoleKernel
     {
         // Get the timezone from the configuration
         return config('app.cron_timezone');
-
     }
 
     // Cache for schedule commands to be array. Such that it do not conflict with application cache
@@ -114,7 +109,6 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-
         $schedule->command('recurring-task-create')->dailyAt('00:30');
         $schedule->command('auto-stop-timer')->everyThirtyMinutes();
         $schedule->command('birthday-notification')->dailyAt('09:00');
@@ -128,7 +122,6 @@ class Kernel extends ConsoleKernel
         // $schedule->command('fetch-ticket-emails')->everyMinute(); // phpcs:ignore
         $schedule->command('send-auto-followup-reminder')->everyMinute();
         $schedule->command('send-time-tracker')->everyMinute();
-
 
         // Daily added different time to reduce server load
         $schedule->command('send-project-reminder')->dailyAt('01:10');
@@ -177,5 +170,4 @@ class Kernel extends ConsoleKernel
     {
         $this->load(__DIR__ . '/Commands');
     }
-
 }

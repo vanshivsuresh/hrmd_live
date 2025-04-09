@@ -303,7 +303,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                     $status = __('app.halfday') . $halfDayType;
                 }
                 else {
-                    $status = '--';
+                    $status = 'Present';
                 }
 
                 $workFrom = $attendance->working_from ?? '--';
@@ -353,6 +353,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
         for ($index = 1; $index <= $num; $index++) {
             $emp_status = $employeedata['dates'][$index]['comments']['status'];
+            // echo "employee status  $emp_status";
 
             // Check if the employee is present
             if (str_contains($emp_status, 'Present')) {
@@ -371,7 +372,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     
 
-    // public function map($employeedata): array==>suresh
+    // public function map($employeedata): array
     // {
     //     $data = array();
     //     $data[] = $employeedata['employee_name'];
@@ -391,6 +392,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     //     return $data;
     // }
+
 
     public function checkHolidays($attendances, $date)
     {
