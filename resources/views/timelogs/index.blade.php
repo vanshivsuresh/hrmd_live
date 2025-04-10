@@ -26,9 +26,23 @@
                     @if ($employees->count() > 1 || in_array('admin', user_roles()))
                         <option value="all">@lang('app.all')</option>
                     @endif
+
                     @foreach ($employees as $employee)
                             <x-user-option :user="$employee" :selected="request('assignee') == 'me' && $employee->id == user()->id"/>
                     @endforeach
+
+                    <!-- @foreach ($projects as $project)
+                        @forelse($project->members as $key => $member)
+                            <x-user-option 
+                                :user="$member->user" 
+                                :selected="request('assignee') == 'me' && $member->id == user()->id" 
+                            />
+                        @endforeach 
+                    <option value="{{ $project->id }}">{{ $project->project_name }}</option>
+                    @endforeach -->
+
+                    
+
                 </select>
             </div>
         </div>
@@ -70,9 +84,18 @@
                                 data-live-search="true"
                                 data-container="body" data-size="8">
                             <option value="all">@lang('app.all')</option>
+
                             @foreach ($projects as $project)
                                 <option value="{{ $project->id }}">{{ $project->project_name }}</option>
                             @endforeach
+
+                            <!-- @forelse($project->members as $key => $member)
+                                    <x-user-option 
+                                        :user="$member->user" 
+                                        :selected="request('assignee') == 'me' && $member->id == user()->id" 
+                                    />
+                            @endforeach -->
+
                         </select>
                     </div>
                 </div>

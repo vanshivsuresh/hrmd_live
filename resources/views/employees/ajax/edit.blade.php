@@ -96,7 +96,7 @@ $addDepartmentPermission = user()->permission('add_department');
                         </div>
                     </div>
                     <div class="col-lg-3">
-
+                            <!-- <div id="profilePicture"></div> -->
                         <x-forms.file allowedFileExtensions="png jpg jpeg svg bmp" class="mr-0 mr-lg-2 mr-md-2 cropper"
                             :fieldLabel="__('modules.profile.profilePicture')"
                             :fieldValue="($employee->image ? $employee->masked_image_url : $employee->image_url)" fieldName="image"
@@ -637,7 +637,17 @@ $addDepartmentPermission = user()->permission('add_department');
                     if (response.status == 'success') {
                         window.location.href = response.redirectUrl;
                     }
-                }
+                },
+                // error: function(error) {
+
+                //     document.getElementById("profilePicture").innerHTML = error?.responseJSON?.message;
+
+                //     // exitDateError.style.display = 'block';
+                //     // exitDateError.innertHtml = error?.responseJSON?.message;
+
+                //     // console.log(error?.responseJSON?.message)
+                    
+                // }
             });
         });
 
