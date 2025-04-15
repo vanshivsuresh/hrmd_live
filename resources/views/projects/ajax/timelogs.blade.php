@@ -30,7 +30,7 @@ $addTimelogPermission = user()->permission('add_timelogs');
                                 <!-- @foreach ($employees as $employee)
                                         <x-user-option :user="$employee" :selected="request('assignee') == 'me' && $employee->id == user()->id"/>
                                 @endforeach -->
-                                
+
                                 @forelse($project->members as $key => $member)
                                     <x-user-option 
                                         :user="$member->user" 
@@ -81,6 +81,21 @@ $addTimelogPermission = user()->permission('add_timelogs');
                     </div>
                     <!-- SEARCH BY TASK END -->
 
+                     <!-- SEARCH BY DATE -->
+					<div class="select-box py-2 px-lg-2 px-md-2 px-0 mr-3">
+						<x-forms.label fieldId="datepicker2" class="d-none d-lg-block d-md-block" />
+						<div class="input-group bg-grey rounded">
+							<div class="input-group-prepend">
+								<span class="input-group-text bg-additional-grey">
+									<i class="fa fa-calendar f-13 text-dark-grey"></i>
+								</span>
+							</div>
+							<input type="text" style="width: 3%;" class="form-control f-14 p-1 height-35 border" id="datatableRange" placeholder="@lang('placeholders.dateRange')">
+                            
+						</div>
+					</div>
+					<!-- SEARCH BY TASK END -->
+
                     <!-- RESET START -->
                     <div class="select-box d-flex py-2 px-lg-2 px-md-2 px-0 mt-4">
                         <x-forms.button-secondary class="btn-xs d-none height-35 mt-2" id="reset-filters" icon="times-circle">
@@ -122,7 +137,7 @@ $addTimelogPermission = user()->permission('add_timelogs');
 @include('sections.datatable_js')
 
 
-<script>
+<!-- <script>
     $('#timelogs-table').on('preXhr.dt', function(e, settings, data) {
 
         var projectID = "{{ $project->id }}";
@@ -328,4 +343,4 @@ $addTimelogPermission = user()->permission('add_timelogs');
             }
         })
     };
-</script>
+</script> -->

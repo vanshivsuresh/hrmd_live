@@ -8,6 +8,7 @@ use App\Models\ProjectTimeLog;
 use App\Models\CustomFieldGroup;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Models\ProjectMember;
@@ -354,6 +355,36 @@ class TimeLogsDataTable extends BaseDataTable
 
         return $dataTable;
     }
+
+    // Exporting timesheet start..
+    public function filename(): string
+    {
+        $request = $this->request();
+        $projectName = 'all-projects';
+        $employeeName = 'all-employees';
+        
+        // Get project name if project filter is applied
+        if (!is_null($request->projectId) ) {
+            $project = \App\Models\Project::find($request->projectId);
+            if ($project) {
+                $projectName = Str::slug($project->project_name);
+            }
+        }
+        
+        // Get employee name if employee filter is applied
+        if (!is_null($request->employee)) {
+            $user = \App\Models\User::find($request->employee);
+            if ($user) {
+                $employeeName = Str::slug($user->name);
+            }
+        }
+        
+        return ucwords($projectName) . '-' . $employeeName . '-' . now()->format('Y-m-d') . '.xlsx';
+    }
+    //Exporting tiesheet end
+
+
+
 
     /**
      * Get columns.

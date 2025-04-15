@@ -16,6 +16,8 @@ use App\Models\PushNotificationSetting;
 use App\Models\Task;
 use App\Models\TaskboardColumn;
 use App\Models\Ticket;
+use App\Models\WeeklyTimesheet;
+use App\Models\WeeklyTimesheetEntries;
 use App\Traits\ClientDashboard;
 use App\Traits\ClientPanelDashboard;
 use App\Traits\CurrencyExchange;
@@ -58,6 +60,23 @@ class DashboardController extends AccountBaseController
 
         //$this->isCheckScript();
         session()->forget(['qr_clock_in']);
+        $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
+
+        // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+
+        if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
+            $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
+            ->join('employee_details', 'employee_details.user_id', 'users.id')
+            ->whereIn('employee_details.reporting_to', [user()->id]);
+        } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
+            $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
+        }
+
+        if (request()->id) {
+            $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
+        }
+
+        $this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
         if (in_array('employee', user_roles())) {
 
             $this->viewOverviewDashboard = user()->permission('view_overview_dashboard');

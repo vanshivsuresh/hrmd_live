@@ -261,6 +261,8 @@ class TimelogController extends AccountBaseController
 
     public function edit($id)
     {
+
+
         $this->pageTitle = __('modules.timeLogs.logTime');
         $editTimelogPermission = $this->editTimelogPermission = user()->permission('edit_timelogs');
         $timeLog = $this->timeLog = ProjectTimeLog::with('user', 'project', 'task')->findOrFail($id)->withCustomFields();
@@ -375,7 +377,6 @@ class TimelogController extends AccountBaseController
 
     public function show($id)
     {
-        
         $this->pageTitle = __('app.menu.timeLogs');
         $this->editTimelogPermission = user()->permission('edit_timelogs');
         $this->timeLog = ProjectTimeLog::with('user', 'user.employeeDetail', 'project', 'task','breaks', 'activeBreak')->findOrFail($id)->withCustomFields();
@@ -794,9 +795,7 @@ class TimelogController extends AccountBaseController
         return Reply::dataOnly(['status' => 'success']);
     }
 
-    public function export()
-
-    {
+    public function export(){
         
         abort_403(!canDataTableExport());
         return Excel::download(new EmployeeTimelogs, 'timelogs.xlsx');

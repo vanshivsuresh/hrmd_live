@@ -177,7 +177,7 @@ $projectArchived = $project->trashed();
 
 @endsection
 
-@push('scripts')
+<!-- @push('scripts')
 
     <script>
         $("body").on("click", ".project-menu .ajax-tab", function(event) {
@@ -294,4 +294,365 @@ $projectArchived = $project->trashed();
                  More btn in projects menu End
         *******************************************************/
     </script>
+@endpush -->
+
+
+@push('scripts')
+	@if($activeTab == 'timelogs')
+        @include('sections.datatable_js')
+
+		<script>
+			var deadLineStartDate = '';
+			var deadLineEndDate = '';
+
+			$(document).on('show.bs.dropdown', '.table-responsive', function() {
+				$('.table-responsive').css( "overflow", "inherit" );
+			});
+
+			$('#timelogs-table').on('preXhr.dt', function(e, settings, data) {
+				const dateRangePicker = $('#datatableRange').data('daterangepicker');
+
+				let startDate = $('#datatableRange').val();
+				let endDate;
+
+				if (startDate === '') {
+					startDate = null;
+					endDate = null;
+				} else {
+					startDate = dateRangePicker.startDate.format('DD-MM-YYYY');
+					endDate = dateRangePicker.endDate.format('DD-MM-YYYY');
+				}
+
+				var projectID = "{{ $project->id }}";
+				var approved = $('#status').val();
+				var invoice = $('#invoice_generate').val();
+				var employee = $('#employee').val();
+				var searchText = $('#search-text-field').val();
+
+				data['projectId'] = projectID;
+				data['approved'] = approved;
+				data['invoice'] = invoice;
+				data['employee'] = employee;
+				data['searchText'] = searchText;
+				data['startDate'] = startDate;
+				data['endDate'] = endDate;
+
+				data['searchText'] = searchText;
+				data['project_admin'] = "{{ ($project->project_admin == user()->id) ? 1 : 0 }}";
+			});
+			const showTable = () => {
+				window.LaravelDataTables["timelogs-table"].draw(true);
+			}
+
+			$('#project_id, #employee, #status, #invoice_generate').on('change keyup', function() {
+				if ($('#status').val() != "all") {
+					$('#reset-filters').removeClass('d-none');
+					showTable();
+				}  else if ($('#employee').val() != "all") {
+					$('#reset-filters').removeClass('d-none');
+					showTable();
+				} else if ($('#invoice_generate').val() != "all") {
+					$('#reset-filters').removeClass('d-none');
+					showTable();
+				} else {
+					$('#reset-filters').addClass('d-none');
+					showTable();
+				}
+			});
+
+			$('#search-text-field').on('keyup', function() {
+				if ($('#search-text-field').val() != "") {
+					$('#reset-filters').removeClass('d-none');
+					showTable();
+				}
+			});
+
+			$( document ).ready(function() {
+				@if (!is_null(request('start')) && !is_null(request('end')))
+				$('#datatableRange').val('{{ request('start') }}' +
+				' @lang("app.to") ' + '{{ request('end') }}');
+				$('#datatableRange').data('daterangepicker').setStartDate("{{ request('start') }}");
+				$('#datatableRange').data('daterangepicker').setEndDate("{{ request('end') }}");
+					showTable();
+				@endif
+			});
+
+			$('#reset-filters,#reset-filters-2').click(function() {
+				$('#filter-form')[0].reset();
+
+				$('#filter-form .select-picker').selectpicker("refresh");
+				$('#reset-filters').addClass('d-none');
+				showTable();
+			});
+
+			$('#quick-action-type').change(function() {
+				const actionValue = $(this).val();
+				if (actionValue != '') {
+					$('#quick-action-apply').removeAttr('disabled');
+
+					if (actionValue == 'change-status') {
+						$('.quick-action-field').addClass('d-none');
+						$('#change-status-action').removeClass('d-none');
+					} else {
+						$('.quick-action-field').addClass('d-none');
+					}
+				} else {
+					$('#quick-action-apply').attr('disabled', true);
+					$('.quick-action-field').addClass('d-none');
+				}
+			});
+
+			$('#quick-action-apply').click(function() {
+				const actionValue = $('#quick-action-type').val();
+				if (actionValue == 'delete') {
+					Swal.fire({
+						title: "@lang('messages.sweetAlertTitle')",
+						text: "@lang('messages.recoverRecord')",
+						icon: 'warning',
+						showCancelButton: true,
+						focusConfirm: false,
+						confirmButtonText: "@lang('messages.confirmDelete')",
+						cancelButtonText: "@lang('app.cancel')",
+						customClass: {
+							confirmButton: 'btn btn-primary mr-3',
+							cancelButton: 'btn btn-secondary'
+						},
+						showClass: {
+							popup: 'swal2-noanimation',
+							backdrop: 'swal2-noanimation'
+						},
+						buttonsStyling: false
+					}).then((result) => {
+						if (result.isConfirmed) {
+							applyQuickAction();
+						}
+					});
+
+				} else {
+					applyQuickAction();
+				}
+			});
+
+			$('body').on('click', '.delete-table-row', function() {
+				var id = $(this).data('time-id');
+				Swal.fire({
+					title: "@lang('messages.sweetAlertTitle')",
+					text: "@lang('messages.recoverRecord')",
+					icon: 'warning',
+					showCancelButton: true,
+					focusConfirm: false,
+					confirmButtonText: "@lang('messages.confirmDelete')",
+					cancelButtonText: "@lang('app.cancel')",
+					customClass: {
+						confirmButton: 'btn btn-primary mr-3',
+						cancelButton: 'btn btn-secondary'
+					},
+					showClass: {
+						popup: 'swal2-noanimation',
+						backdrop: 'swal2-noanimation'
+					},
+					buttonsStyling: false
+				}).then((result) => {
+					if (result.isConfirmed) {
+						var url = "{{ route('timelogs.destroy', ':id') }}";
+						url = url.replace(':id', id);
+
+						var token = "{{ csrf_token() }}";
+
+						$.easyAjax({
+							type: 'POST',
+							url: url,
+							blockUI: true,
+							data: {
+								'_token': token,
+								'_method': 'DELETE'
+							},
+							success: function(response) {
+								if (response.status == "success") {
+									showTable();
+								}
+							}
+						});
+					}
+				});
+			});
+
+			$('body').on('click', '.stop-active-timer', function() {
+				var id = $(this).data('time-id');
+				var url = "{{ route('timelogs.stop_timer', ':id') }}";
+				url = url.replace(':id', id);
+				var token = '{{ csrf_token() }}';
+				$.easyAjax({
+					url: url,
+					type: "POST",
+					data: {
+						timeId: id,
+						_token: token
+					},
+					success: function(data) {
+						showTable();
+					}
+				})
+			});
+
+			$('body').on('click', '.approve-timelog', function() {
+				var id = $(this).data('time-id');
+				var url = "{{ route('timelogs.approve_timelog', ':id') }}";
+				url = url.replace(':id', id);
+				var token = '{{ csrf_token() }}';
+				$.easyAjax({
+					url: url,
+					type: "POST",
+					data: {
+						id: id,
+						_token: token
+					},
+					success: function(data) {
+						showTable();
+					}
+				})
+			});
+
+			const applyQuickAction = () => {
+				var rowdIds = $("#timelogs-table input:checkbox:checked").map(function() {
+					return $(this).val();
+				}).get();
+
+				var url = "{{ route('timelogs.apply_quick_action') }}?row_ids=" + rowdIds;
+
+				$.easyAjax({
+					url: url,
+					container: '#quick-action-form',
+					type: "POST",
+					disableButton: true,
+					buttonSelector: "#quick-action-apply",
+					data: $('#quick-action-form').serialize(),
+					blockUI: true,
+					success: function(response) {
+						if (response.status == 'success') {
+							showTable();
+							resetActionButtons();
+							deSelectAll();
+						}
+					}
+				})
+			};
+		</script>
+
+    @endif
+
+	<script>
+		$("body").on("click", ".project-menu .ajax-tab", function(event) {
+			event.preventDefault();
+
+			$('.project-menu .p-sub-menu').removeClass('active');
+			$(this).addClass('active');
+
+			const requestUrl = this.href;
+
+			$.easyAjax({
+				url: requestUrl,
+				blockUI: true,
+				container: ".content-wrapper",
+				historyPush: true,
+				success: function(response) {
+					if (response.status == "success") {
+						$('.content-wrapper').html(response.html);
+						init('.content-wrapper');
+					}
+				}
+			});
+		});
+
+	</script>
+	<script>
+		const activeTab = "{{ $activeTab }}";
+		$('.project-menu .' + activeTab).addClass('active');
+
+	</script>
+	<script>
+		/*******************************************************
+				 More btn in projects menu Start
+		*******************************************************/
+
+		const container = document.querySelector('.tabs');
+		const primary = container.querySelector('.-primary');
+		const primaryItems = container.querySelectorAll('.-primary > li:not(.-more)');
+		container.classList.add('--jsfied'); // insert "more" button and duplicate the list
+
+		primary.insertAdjacentHTML('beforeend', `
+		<li class="-more">
+			<button type="button" class="px-4 h-100 bg-grey d-none d-lg-flex align-items-center" aria-haspopup="true" aria-expanded="false">
+			{{__('app.more')}} <span>&darr;</span>
+			</button>
+			<ul class="-secondary" id="hide-project-menues">
+			${primary.innerHTML}
+			</ul>
+		</li>
+		`);
+		const secondary = container.querySelector('.-secondary');
+		const secondaryItems = secondary.querySelectorAll('li');
+		const allItems = container.querySelectorAll('li');
+		const moreLi = primary.querySelector('.-more');
+		const moreBtn = moreLi.querySelector('button');
+		moreBtn.addEventListener('click', e => {
+			e.preventDefault();
+			container.classList.toggle('--show-secondary');
+			moreBtn.setAttribute('aria-expanded', container.classList.contains('--show-secondary'));
+		}); // adapt tabs
+
+		const doAdapt = () => {
+			// reveal all items for the calculation
+			allItems.forEach(item => {
+				item.classList.remove('--hidden');
+			}); // hide items that won't fit in the Primary
+
+			let stopWidth = moreBtn.offsetWidth;
+			let hiddenItems = [];
+			const primaryWidth = primary.offsetWidth;
+			primaryItems.forEach((item, i) => {
+				if (primaryWidth >= stopWidth + item.offsetWidth) {
+					stopWidth += item.offsetWidth;
+				} else {
+					item.classList.add('--hidden');
+					hiddenItems.push(i);
+				}
+			}); // toggle the visibility of More button and items in Secondary
+
+			if (!hiddenItems.length) {
+				moreLi.classList.add('--hidden');
+				container.classList.remove('--show-secondary');
+				moreBtn.setAttribute('aria-expanded', false);
+			} else {
+				secondaryItems.forEach((item, i) => {
+					if (!hiddenItems.includes(i)) {
+						item.classList.add('--hidden');
+					}
+				});
+			}
+		};
+
+		doAdapt(); // adapt immediately on load
+
+		window.addEventListener('resize', doAdapt); // adapt on window resize
+		// hide Secondary on the outside click
+
+		document.addEventListener('click', e => {
+			let el = e.target;
+
+			while (el) {
+				if (el === secondary || el === moreBtn) {
+					return;
+				}
+
+				el = el.parentNode;
+			}
+
+			container.classList.remove('--show-secondary');
+			moreBtn.setAttribute('aria-expanded', false);
+		});
+		/*******************************************************
+				 More btn in projects menu End
+		*******************************************************/
+	</script>
 @endpush
