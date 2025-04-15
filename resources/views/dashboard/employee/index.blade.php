@@ -374,6 +374,8 @@
                             </div>
                         @endif
 
+
+
                             @include('dashboard.employee.widgets.shift_schedule')
 
                             @include('dashboard.employee.widgets.birthday')
@@ -432,8 +434,38 @@
                     @include('dashboard.employee.widgets.follow_ups')
                     @include('dashboard.employee.widgets.lead')
                     @include('dashboard.employee.widgets.week_timelog')
+                    
                 </div>
                 <!-- EMP DASHBOARD TASKS PROJECTS END -->
+                 
+                <!-- EMP DASHBOARD PENDING APPROVAL START -->
+                @if ((user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) || in_array('admin', user_roles()))
+                <div class="row mb-3 mt-xl-0 mt-lg-4 mt-md-4 mt-4">
+                    @if (in_array('tasks', $activeWidgets) && (!is_null($viewTaskPermission) && $viewTaskPermission != 'none') && in_array('tasks', user_modules()))
+                        <div class="col-md-6 mb-3">
+                            <div
+                                class="bg-white p-20 rounded b-shadow-4 d-flex justify-content-between align-items-center mb-4 mb-md-0 mb-lg-0">
+                                <div class="d-block ">
+                                    <h5 class="f-15 f-w-500 mb-20 text-darkest-grey">Pending Timesheet Approval</h5>
+                                    <div class="d-flex">
+                                    <a href="{{ route('weekly-timesheets.index', ['view' => 'pending_approval']) }}">
+                                    <p class="mb-0 f-21 font-weight-bold text-blue d-grid mr-5">
+                                    {{ count($weeklyTimesheet) }}<span class="f-12 font-weight-normal text-lightest">
+                                                    @lang('app.pending') </span>
+                                            </p>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="d-block">
+                                    <i class="fa fa-list text-lightest f-27"></i>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+                @endif
+                <!-- EMP DASHBOARD PENDING APPROVAL END -->
+
                 @include('dashboard.employee.widgets.my_tasks')
                 @include('dashboard.employee.widgets.tickets')
                 @include('dashboard.employee.widgets.my_calendar')

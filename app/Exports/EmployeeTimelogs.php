@@ -47,7 +47,6 @@ class EmployeeTimelogs extends AccountBaseController implements FromView, Should
    public function view(): View
     {
 
-
         $this->startDate = $startDate = Carbon::createFromFormat(company()->date_format, urldecode(request()->startDate))->toDateString();
         $this->endDate = $endDate = Carbon::createFromFormat(company()->date_format, urldecode(request()->endDate))->toDateString();
         $employee = request()->employee;
