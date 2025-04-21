@@ -467,7 +467,10 @@
                                     <div class="d-flex">
                                         <a href="{{ route('leaves.index', ['status' => 'pending']) }}">
                                             <p class="mb-0 f-21 font-weight-bold text-blue d-grid mr-5">
-                                                {{ count($pendingLeaves) }}<span class="f-12 font-weight-normal text-lightest">
+                                                <!-- {{ count($pendingLeaves) }}<span class="f-12 font-weight-normal text-lightest">
+                                                    @lang('app.pending')
+                                                </span> -->
+                                                {{ count($pendingLeaves ?? []) }}<span class="f-12 font-weight-normal text-lightest">
                                                     @lang('app.pending')
                                                 </span>
                                             </p>
