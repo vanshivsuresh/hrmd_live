@@ -91,267 +91,237 @@ class AttendanceController extends AccountBaseController
     }
 
     public function summaryData($request)
-    {
+	{
+		$viewEmployeePermission = user()->permission('view_employees');
+		$startOfMonth = Carbon::createFromDate($request->year, $request->month, 1)->startOfMonth();
+		$endOfMonth = $startOfMonth->copy()->endOfMonth();
 
-        $viewEmployeePermission = user()->permission('view_employees');
-        $employees = User::with(
-            [
-                'employeeDetail.designation:id,name',
-                'attendance' => function ($query) use ($request) {
-                    $startOfMonth = Carbon::createFromDate($request->year, $request->month, 1)->startOfMonth();
-                    $officestartTimeDB = Carbon::createFromFormat('Y-m-d H:i:s', $startOfMonth, company()->timezone);
-                    $startOfMonth = $startOfMonth->subMinutes($officestartTimeDB->offset / 60);
+		// Adjust timezone for query
+		$officestartTimeDB = Carbon::createFromFormat('Y-m-d H:i:s', $startOfMonth, company()->timezone);
+		$startOfMonth = $startOfMonth->subMinutes($officestartTimeDB->offset / 60);
+		$officeEndTimeDB = Carbon::createFromFormat('Y-m-d H:i:s', $endOfMonth, company()->timezone);
+		$endOfMonth = $endOfMonth->subMinutes($officeEndTimeDB->offset / 60);
 
-                    $endOfMonth = Carbon::createFromDate($request->year, $request->month, 1)->endOfMonth();
-                    $officeEndTimeDB = Carbon::createFromFormat('Y-m-d H:i:s', $endOfMonth, company()->timezone);
-                    $endOfMonth = $endOfMonth->subMinutes($officeEndTimeDB->offset / 60);
+		// Base query for employees
+		$employeesQuery = User::with([
+			'employeeDetail.designation:id,name',
+			'attendance' => function ($query) use ($startOfMonth, $endOfMonth) {
+				$query->whereBetween('attendances.clock_in_time', [$startOfMonth, $endOfMonth]);
+				if ($this->viewAttendancePermission == 'added') {
+					$query->where('attendances.added_by', user()->id);
+				} elseif ($this->viewAttendancePermission == 'owned') {
+					$query->where('attendances.user_id', user()->id);
+				}
+			},
+			'leaves' => function ($query) use ($request) {
+				$query->whereRaw('MONTH(leaves.leave_date) = ?', [$request->month])
+					->whereRaw('YEAR(leaves.leave_date) = ?', [$request->year])
+					->where('status', 'approved');
+			},
+			'shifts' => function ($query) use ($request) {
+				$query->whereRaw('MONTH(employee_shift_schedules.date) = ?', [$request->month])
+					->whereRaw('YEAR(employee_shift_schedules.date) = ?', [$request->year]);
+			},
+			'leaves.type', 'shifts.shift', 'attendance.shift'
+		])
+		->join('role_user', 'role_user.user_id', '=', 'users.id')
+		->join('roles', 'roles.id', '=', 'role_user.role_id')
+		->leftJoin('employee_details', 'employee_details.user_id', '=', 'users.id')
+		->select('users.id', 'users.name', 'users.inactive_date', 'users.email', 'users.created_at', 'employee_details.department_id', 'employee_details.user_id', 'employee_details.added_by', 'users.image')
+		->onlyEmployee()
+		->withoutGlobalScope(ActiveScope::class)
+		->where(function ($query) use ($request) {
+			$query->where('users.status', 'active')
+				->orWhere(function ($subQuery) use ($request) {
+					$subQuery->whereRaw('YEAR(users.inactive_date) >= ?', [$request->year])
+							->whereRaw('MONTH(users.inactive_date) >= ?', [$request->month]);
+				});
+		})
+		->groupBy('users.id');
 
-                    $query->whereBetween('attendances.clock_in_time', [$startOfMonth, $endOfMonth]);
+		// Apply filters
+		if ($request->department != 'all') {
+			$employeesQuery->where('employee_details.department_id', $request->department);
+		}
 
-                    // $query->orwhereRaw('MONTH(attendances.clock_in_time) = ?', [$request->month])
-                        // ->orwhereRaw('YEAR(attendances.clock_in_time) = ?', [$request->year]);
+		if ($request->designation != 'all') {
+			$employeesQuery->where('employee_details.designation_id', $request->designation);
+		}
 
-                    if ($this->viewAttendancePermission == 'added') {
-                        $query->where('attendances.added_by', user()->id);
+		// Handle userId filter and include juniors
+		$employeeIds = [];
+		if ($request->userId != 'all' && $request->userId) {
+			$user = User::with('reportingTeam')->find($request->userId);
+			if ($user) {
+				$employeeIds[] = $user->id;
+				if ($user->reportingTeam->isNotEmpty()) {
+					$employeeIds = array_merge($employeeIds, $user->reportingTeam->pluck('user_id')->toArray());
+				}
+			}
+			$employeesQuery->whereIn('users.id', $employeeIds);
+		}
 
-                    }
-                    elseif ($this->viewAttendancePermission == 'owned') {
-                        $query->where('attendances.user_id', user()->id);
-                    }
-                },
-                'leaves' => function ($query) use ($request) {
-                    $query->whereRaw('MONTH(leaves.leave_date) = ?', [$request->month])
-                        ->whereRaw('YEAR(leaves.leave_date) = ?', [$request->year])
-                        ->where('status', 'approved');
-                },
-                'shifts' => function ($query) use ($request) {
-                    $query->whereRaw('MONTH(employee_shift_schedules.date) = ?', [$request->month])
-                        ->whereRaw('YEAR(employee_shift_schedules.date) = ?', [$request->year]);
-                },
-                'leaves.type', 'shifts.shift', 'attendance.shift']
-        )->join('role_user', 'role_user.user_id', '=', 'users.id')
-            ->join('roles', 'roles.id', '=', 'role_user.role_id')
-            ->leftJoin('employee_details', 'employee_details.user_id', '=', 'users.id')
-            ->select('users.id', 'users.name','users.inactive_date', 'users.email', 'users.created_at', 'employee_details.department_id', 'employee_details.user_id', 'employee_details.added_by', 'users.image')
-            ->onlyEmployee()
-            ->withoutGlobalScope(ActiveScope::class)
-            ->where(function ($query) use ($request) {
-                // $query->whereNull('users.inactive_date')
-                $query->where('users.status','active')
-                      ->orWhere(function ($subQuery) use ($request) {
-                          $subQuery->whereRaw('YEAR(users.inactive_date) >= ?', [$request->year])
-                                ->whereRaw('MONTH(users.inactive_date) >= ?', [$request->month]);
-                      });
-            })
-            ->groupBy('users.id');
+		if ($viewEmployeePermission == 'owned') {
+			$employeesQuery->where('users.id', user()->id);
+		} elseif ($viewEmployeePermission == 'both') {
+			$employeesQuery->where(function ($q) {
+				$q->where('employee_details.user_id', user()->id)
+				->orWhere('employee_details.added_by', user()->id);
+			});
+		} elseif ($viewEmployeePermission == 'added') {
+			$employeesQuery->where('employee_details.added_by', user()->id);
+		}
 
-        if ($request->department != 'all') {
-            $employees = $employees->where('employee_details.department_id', $request->department);
-        }
+		$employees = $employeesQuery->get();
+		$this->holidays = Holiday::whereRaw('MONTH(holidays.date) = ?', [$request->month])
+			->whereRaw('YEAR(holidays.date) = ?', [$request->year])
+			->get();
 
-        if ($request->designation != 'all') {
-            $employees = $employees->where('employee_details.designation_id', $request->designation);
-        }
+		$final = [];
+		$holidayOccasions = [];
+		$leaveReasons = [];
 
-        if ($request->userId != 'all') {
-            $employees = $employees->where('users.id', $request->userId);
-        }
+		$this->daysInMonth = Carbon::parse('01-' . $request->month . '-' . $request->year)->daysInMonth;
+		$now = now()->timezone($this->company->timezone);
+		$requestedDate = Carbon::parse('01-' . $request->month . '-' . $request->year)->endOfMonth();
 
-        if ($viewEmployeePermission == 'owned') {
-            $employees = $employees->where('users.id', user()->id);
-        }
-        elseif ($viewEmployeePermission == 'both') {
-            $employees = $employees->where('employee_details.user_id', user()->id)
-                                ->orWhere('employee_details.added_by', user()->id);
-        }
-        elseif ($viewEmployeePermission == 'added') {
-            $employees = $employees->where('employee_details.added_by', user()->id);
-        }
+		foreach ($employees as $employee) {
+			$dataBeforeJoin = null;
 
-        $employees = $employees->get();
-        $user = user();
-        $this->holidays = Holiday::whereRaw('MONTH(holidays.date) = ?', [$request->month])->whereRaw('YEAR(holidays.date) = ?', [$request->year])->get();
+			$dataTillToday = array_fill(1, $now->copy()->format('d'), 'Absent');
+			$dataTillRequestedDate = array_fill(1, (int)$this->daysInMonth, 'Absent');
+			$daysTofill = ((int)$this->daysInMonth - (int)$now->copy()->format('d'));
 
-        $final = [];
-        $holidayOccasions = [];
-        $leaveReasons = [];
+			if (($now->copy()->format('d') != $this->daysInMonth) && !$requestedDate->isPast()) {
+				$dataFromTomorrow = array_fill($now->copy()->addDay()->format('d'), (($daysTofill >= 0 ? $daysTofill : 0)), '-');
+			} else {
+				$dataFromTomorrow = array_fill($now->copy()->addDay()->format('d'), (($daysTofill >= 0 ? $daysTofill : 0)), 'Absent');
+			}
 
-        $this->daysInMonth = Carbon::parse('01-' . $request->month . '-' . $request->year)->daysInMonth;
+			if (!$requestedDate->isPast()) {
+				$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')] = array_replace($dataTillToday, $dataFromTomorrow);
+			} else {
+				$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')] = array_replace($dataTillRequestedDate, $dataFromTomorrow);
+			}
 
-        $now = now()->timezone($this->company->timezone);
-        $requestedDate = Carbon::parse(Carbon::parse('01-' . $request->month . '-' . $request->year))->endOfMonth();
+			$shiftScheduleCollection = $employee->shifts->keyBy('date');
 
-        foreach ($employees as $employee) {
+			foreach ($employee->shifts as $shifts) {
+				if ($shifts->shift->shift_name == 'Day Off') {
+					$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$shifts->date->day] = 'Day Off';
+				}
+			}
 
-            $dataBeforeJoin = null;
+			$firstAttendanceProcessed = [];
+			$isHalfDay = [];
+			$isLate = [];
 
-            $dataTillToday = array_fill(1, $now->copy()->format('d'), 'Absent');
-            $dataTillRequestedDate = array_fill(1, (int)$this->daysInMonth, 'Absent');
-            $daysTofill = ((int)$this->daysInMonth - (int)$now->copy()->format('d'));
+			foreach ($employee->attendance as $attendance) {
+				$clockInTimeUTC = $attendance->clock_in_time->timezone(company()->timezone)->toDateTimeString();
+				$clockInTime = Carbon::createFromFormat('Y-m-d H:i:s', $clockInTimeUTC, 'UTC');
+				$startOfDayKey = $clockInTime->startOfDay()->toDateTimeString();
 
+				$shiftSchedule = $shiftScheduleCollection[$startOfDayKey] ?? null;
 
+				if ($shiftSchedule) {
+					$shift = $shiftSchedule->shift;
+					$shiftStartTime = Carbon::parse($clockInTime->toDateString() . ' ' . $shift->office_start_time);
+					$shiftEndTime = Carbon::parse($clockInTime->toDateString() . ' ' . $shift->office_end_time);
 
-            if (($now->copy()->format('d') != $this->daysInMonth) && !$requestedDate->isPast()) {
-                $dataFromTomorrow = array_fill($now->copy()->addDay()->format('d'), (($daysTofill >= 0 ? $daysTofill : 0)), '-');
-            }
-            else {
-                $dataFromTomorrow = array_fill($now->copy()->addDay()->format('d'), (($daysTofill >= 0 ? $daysTofill : 0)), 'Absent');
-            }
+					$isWithinShift = $clockInTime->between($shiftStartTime, $shiftEndTime);
+					$isPreviousShift = $clockInTime->betweenIncluded($shiftStartTime->subDay(), $shiftEndTime->subDay());
+					$isAssignedShift = $attendance->employee_shift_id == $shift->id;
+				} else {
+					$isWithinShift = $isPreviousShift = $isAssignedShift = false;
+				}
 
-            if (!$requestedDate->isPast()) {
-                $final[$employee->id . '#' . $employee->name] = array_replace($dataTillToday, $dataFromTomorrow);
+				if (!isset($isHalfDay[$employee->id][$startOfDayKey]) && !isset($isLate[$employee->id][$startOfDayKey])) {
+					$isHalfDay[$employee->id][$startOfDayKey] = $isLate[$employee->id][$startOfDayKey] = false;
+				}
 
-            }
-            else {
-                $final[$employee->id . '#' . $employee->name] = array_replace($dataTillRequestedDate, $dataFromTomorrow);
-            }
+				if (!isset($firstAttendanceProcessed[$employee->id][$startOfDayKey])) {
+					$firstAttendanceProcessed[$employee->id][$startOfDayKey] = true;
+					$isHalfDay[$employee->id][$startOfDayKey] = $attendance->half_day == 'yes';
+					$isLate[$employee->id][$startOfDayKey] = $attendance->late == 'yes';
+				}
 
-            $shiftScheduleCollection = $employee->shifts->keyBy('date');
+				$iconClassKey = $isHalfDay[$employee->id][$startOfDayKey] ? 'star-half-alt text-red' : ($isLate[$employee->id][$startOfDayKey] ? 'exclamation-circle text-warning' : 'check text-success');
+				$tooltipTitle = $attendance->employee_shift_id ? $attendance->shift->shift_name : __('app.present');
+				$attendanceHtml = "<a href=\"javascript:;\" data-toggle=\"tooltip\" data-original-title=\"{$tooltipTitle}\" class=\"view-attendance\" data-attendance-id=\"{$attendance->id}\"><i class=\"fa fa-{$iconClassKey}\"></i></a>";
 
+				if ($isWithinShift || $isAssignedShift || $isPreviousShift) {
+					$dayToAssign = $isPreviousShift ? $clockInTime->copy()->subDay()->day : $clockInTime->day;
+					$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$dayToAssign] = $attendanceHtml;
+				} else {
+					$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$clockInTime->day] = $attendanceHtml;
+				}
+			}
 
-            foreach ($employee->shifts as $shifts) {
-                if ($shifts->shift->shift_name == 'Day Off') {
-                    $final[$employee->id . '#' . $employee->name][$shifts->date->day] = 'Day Off';
-                }
+			$emplolyeeName = view('components.employee', [
+				'user' => $employee,
+				'isJunior' => $employeeIds && in_array($employee->id, array_slice($employeeIds, 1))
+			])->render();
 
-            }
+			$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][] = $emplolyeeName;
 
-            $firstAttendanceProcessed = [];
+			if ($employee->employeeDetail && $employee->employeeDetail->joining_date->greaterThan(Carbon::parse('01-' . $request->month . '-' . $request->year))) {
+				if ($request->month == $employee->employeeDetail->joining_date->format('m') && $request->year == $employee->employeeDetail->joining_date->format('Y')) {
+					$dataBeforeJoin = array_fill(1, $employee->employeeDetail->joining_date->format('d') == '01' ? 1 : $employee->employeeDetail->joining_date->subDay()->format('d'), '-');
+				} elseif (($request->month < $employee->employeeDetail->joining_date->format('m') && $request->year == $employee->employeeDetail->joining_date->format('Y')) || $request->year < $employee->employeeDetail->joining_date->format('Y')) {
+					$dataBeforeJoin = array_fill(1, $this->daysInMonth, '-');
+				}
+			}
 
-            foreach ($employee->attendance as $attendance) {
-                $clockInTimeUTC = $attendance->clock_in_time->timezone(company()->timezone)->toDateTimeString();
-                $clockInTime = Carbon::createFromFormat('Y-m-d H:i:s', $clockInTimeUTC, 'UTC');
-                $startOfDayKey = $clockInTime->startOfDay()->toDateTimeString();
+			if (Carbon::parse('01-' . $request->month . '-' . $request->year)->isFuture()) {
+				$dataBeforeJoin = array_fill(1, $this->daysInMonth, '-');
+			}
 
-                $shiftSchedule = $shiftScheduleCollection[$startOfDayKey] ?? null;
+			if (!is_null($dataBeforeJoin)) {
+				$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')] = array_replace($final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')], $dataBeforeJoin);
+			}
 
-                if ($shiftSchedule) {
-                    $shift = $shiftSchedule->shift;
-                    $shiftStartTime = Carbon::parse($clockInTime->toDateString() . ' ' . $shift->office_start_time);
-                    $shiftEndTime = Carbon::parse($clockInTime->toDateString() . ' ' . $shift->office_end_time);
+			foreach ($employee->leaves as $leave) {
+				if ($leave->duration == 'half day') {
+					if ($final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$leave->leave_date->day] == '-' || $final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$leave->leave_date->day] == 'Absent') {
+						$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$leave->leave_date->day] = 'Half Day';
+					}
+				} else {
+					$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$leave->leave_date->day] = 'Leave';
+					$leaveReasons[$employee->id][$leave->leave_date->day] = $leave->type->type_name . ': ' . $leave->reason;
+				}
+			}
 
-                    // Determine if the attendance is within the shift time, the previous day's shift, or otherwise
-                    $isWithinShift = $clockInTime->between($shiftStartTime, $shiftEndTime);
-                    $isPreviousShift = $clockInTime->betweenIncluded($shiftStartTime->subDay(), $shiftEndTime->subDay());
-                    $isAssignedShift = $attendance->employee_shift_id == $shift->id;
+			foreach ($this->holidays as $holiday) {
+				$departmentId = $employee->employeeDetail ? $employee->employeeDetail->department_id : null;
+				$designationId = $employee->employeeDetail ? $employee->employeeDetail->designation_id : null;
+				$employmentType = $employee->employeeDetail ? $employee->employeeDetail->employment_type : null;
 
-                }
-                else {
-                    $isWithinShift = $isPreviousShift = $isAssignedShift = false;
-                }
+				$holidayDepartment = (!is_null($holiday->department_id_json)) ? json_decode($holiday->department_id_json) : [];
+				$holidayDesignation = (!is_null($holiday->designation_id_json)) ? json_decode($holiday->designation_id_json) : [];
+				$holidayEmploymentType = (!is_null($holiday->employment_type_json)) ? json_decode($holiday->employment_type_json) : [];
 
-                if (!isset($isHalfDay[$employee->id][$startOfDayKey]) && !isset($isLate[$employee->id][$startOfDayKey])) {
-                    $isHalfDay[$employee->id][$startOfDayKey] = $isLate[$employee->id][$startOfDayKey] = false;
-                }
+				if (((in_array($departmentId, $holidayDepartment) || $holiday->department_id_json == null) &&
+					(in_array($designationId, $holidayDesignation) || $holiday->designation_id_json == null) &&
+					(in_array($employmentType, $holidayEmploymentType) || $holiday->employment_type_json == null))) {
+					if ($final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$holiday->date->day] == 'Absent' || $final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$holiday->date->day] == '-') {
+						$final[$employee->id . '#' . $employee->name . '#' . ($employeeIds && in_array($employee->id, array_slice($employeeIds, 1)) ? 'Junior' : 'Employee')][$holiday->date->day] = 'Holiday';
+						$holidayOccasions[$holiday->date->day] = $holiday->occassion;
+					}
+				}
+			}
+		}
 
-                // Check if this is the first attendance of the day for this employee
-                if (!isset($firstAttendanceProcessed[$employee->id][$startOfDayKey])) {
-                    $firstAttendanceProcessed[$employee->id][$startOfDayKey] = true; // Mark as processed
+		$this->employeeAttendence = $final;
+		$this->holidayOccasions = $holidayOccasions;
+		$this->leaveReasons = $leaveReasons;
+		$this->weekMap = Holiday::weekMap('D');
+		$this->month = $request->month;
+		$this->year = $request->year;
 
-                    // Apply "half day" or "late" logic only if it's the first attendance
-                    $isHalfDay[$employee->id][$startOfDayKey] = $attendance->half_day == 'yes';
-                    $isLate[$employee->id][$startOfDayKey] = $attendance->late == 'yes';
+		$view = view('attendances.ajax.summary_data', $this->data)->render();
 
-                }
-
-                $iconClassKey = $isHalfDay[$employee->id][$startOfDayKey] ? 'star-half-alt text-red' : ($isLate[$employee->id][$startOfDayKey] ? 'exclamation-circle text-warning' : 'check text-success');
-
-                // Tooltip title based on attendance status or presence
-                $tooltipTitle = $attendance->employee_shift_id ? $attendance->shift->shift_name : __('app.present');
-
-                // Construct the attendance HTML once
-                $attendanceHtml = "<a href=\"javascript:;\" data-toggle=\"tooltip\" data-original-title=\"{$tooltipTitle}\" class=\"view-attendance\" data-attendance-id=\"{$attendance->id}\"><i class=\"fa fa-{$iconClassKey}\"></i></a>";
-
-                // Determine the day to assign the attendanceHtml
-                if ($isWithinShift || $isAssignedShift || $isPreviousShift) {
-                    $dayToAssign = $isPreviousShift ? $clockInTime->copy()->subDay()->day : $clockInTime->day;
-                    $final[$employee->id . '#' . $employee->name][$dayToAssign] = $attendanceHtml;
-
-                }
-                else {
-                    $final[$employee->id . '#' . $employee->name][$clockInTime->day] = $attendanceHtml;
-                }
-            }
-
-            $emplolyeeName = view('components.employee', [
-                'user' => $employee
-            ]);
-
-            $final[$employee->id . '#' . $employee->name][] = $emplolyeeName;
-
-            if ($employee->employeeDetail->joining_date->greaterThan(Carbon::parse(Carbon::parse('01-' . $request->month . '-' . $request->year)))) {
-                if ($request->month == $employee->employeeDetail->joining_date->format('m') && $request->year == $employee->employeeDetail->joining_date->format('Y')) {
-                    if ($employee->employeeDetail->joining_date->format('d') == '01') {
-                        $dataBeforeJoin = array_fill(1, $employee->employeeDetail->joining_date->format('d'), '-');
-                    }
-                    else {
-                        $dataBeforeJoin = array_fill(1, $employee->employeeDetail->joining_date->subDay()->format('d'), '-');
-                    }
-                }
-
-                if (($request->month < $employee->employeeDetail->joining_date->format('m') && $request->year == $employee->employeeDetail->joining_date->format('Y')) || $request->year < $employee->employeeDetail->joining_date->format('Y')) {
-                    $dataBeforeJoin = array_fill(1, $this->daysInMonth, '-');
-                }
-            }
-
-            if (Carbon::parse('01-' . $request->month . '-' . $request->year)->isFuture()) {
-                $dataBeforeJoin = array_fill(1, $this->daysInMonth, '-');
-            }
-
-            if (!is_null($dataBeforeJoin)) {
-                $final[$employee->id . '#' . $employee->name] = array_replace($final[$employee->id . '#' . $employee->name], $dataBeforeJoin);
-            }
-
-            foreach ($employee->leaves as $leave) {
-                if ($leave->duration == 'half day') {
-                    if ($final[$employee->id . '#' . $employee->name][$leave->leave_date->day] == '-' || $final[$employee->id . '#' . $employee->name][$leave->leave_date->day] == 'Absent') {
-                        $final[$employee->id . '#' . $employee->name][$leave->leave_date->day] = 'Half Day';
-                    }
-                }
-                else {
-                    $final[$employee->id . '#' . $employee->name][$leave->leave_date->day] = 'Leave';
-                    $leaveReasons[$employee->id][$leave->leave_date->day] = $leave->type->type_name . ': ' . $leave->reason;
-                }
-
-            }
-
-            foreach ($this->holidays as $holiday) {
-                $departmentId = $employee->employeeDetail->department_id;
-                $designationId = $employee->employeeDetail->designation_id;
-                $employmentType = $employee->employeeDetail->employment_type;
-
-
-                $holidayDepartment = (!is_null($holiday->department_id_json)) ? json_decode($holiday->department_id_json) : [];
-                $holidayDesignation = (!is_null($holiday->designation_id_json)) ? json_decode($holiday->designation_id_json) : [];
-                $holidayEmploymentType = (!is_null($holiday->employment_type_json)) ? json_decode($holiday->employment_type_json) : [];
-
-                if (((in_array($departmentId, $holidayDepartment) || $holiday->department_id_json == null) &&
-                    (in_array($designationId, $holidayDesignation) || $holiday->designation_id_json == null) &&
-                    (in_array($employmentType, $holidayEmploymentType) || $holiday->employment_type_json == null))
-                ) {
-
-
-                    if ($final[$employee->id . '#' . $employee->name][$holiday->date->day] == 'Absent' || $final[$employee->id . '#' . $employee->name][$holiday->date->day] == '-') {
-                        $final[$employee->id . '#' . $employee->name][$holiday->date->day] = 'Holiday';
-                        $holidayOccasions[$holiday->date->day] = $holiday->occassion;
-                    }
-                }
-            }
-        }
-
-        $this->employeeAttendence = $final;
-        $this->holidayOccasions = $holidayOccasions;
-        $this->leaveReasons = $leaveReasons;
-
-        $this->weekMap = Holiday::weekMap('D');
-
-        $this->month = $request->month;
-        $this->year = $request->year;
-
-        $view = view('attendances.ajax.summary_data', $this->data)->render();
-
-        return Reply::dataOnly(['status' => 'success', 'data' => $view]);
-    }
+		return Reply::dataOnly(['status' => 'success', 'data' => $view]);
+	}
 
     /**
      * XXXXXXXXXXX

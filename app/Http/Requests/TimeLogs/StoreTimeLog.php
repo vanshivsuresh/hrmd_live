@@ -24,19 +24,40 @@ class StoreTimeLog extends CoreRequest
      *
      * @return array
      */
+
+    // public function rules()
+    // {
+    //     $rules = array();
+
+    //     $rules['start_time'] = 'required';
+    //     $rules['end_time'] = 'required';
+    //     $rules['memo'] = 'required';
+    //     $rules['task_id'] = 'required';
+    //     $rules['user_id'] = 'required';
+
+    //     $rules = $this->customFieldRules($rules);
+
+    //     return $rules;
+    // }
+
+
     public function rules()
     {
-        $rules = array();
+        $rules = [
+            'memo' => 'required',
+            'task_id' => 'required',
+            'user_id' => 'required',
+        ];
 
-        $rules['start_time'] = 'required';
-        $rules['end_time'] = 'required';
-        $rules['memo'] = 'required';
-        $rules['task_id'] = 'required';
-        $rules['user_id'] = 'required';
+        // Make time fields conditionally required
+        if (!$this->has('total_hours')) {
+            $rules['start_time'] = 'required';
+            $rules['end_time'] = 'required';
+        } else {
+            $rules['total_hours'] = 'required|numeric|min:0';
+        }
 
-        $rules = $this->customFieldRules($rules);
-
-        return $rules;
+        return $this->customFieldRules($rules);
     }
 
     public function attributes()

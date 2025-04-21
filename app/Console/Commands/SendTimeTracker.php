@@ -76,9 +76,15 @@ class SendTimeTracker extends Command
                         ->where('user_id', $employeeId)
                         ->exists();
 
+                    // Check if employee logged in before office time
+                    $earlyLoginExists = ProjectTimeLog::whereDate('start_time', $currentDay)
+                        ->where('user_id', $employeeId)
+                        ->where('start_time', '<', $startDateTime)
+                        ->exists();
+
                     $user = User::find($employeeId);
 
-                    if (!$leaveExists && !$timeLogExists && $user && $user->email_notifications) {
+                    if (!$leaveExists && !$timeLogExists && $user && !$earlyLoginExists && $user->email_notifications) {
                         event(new TimeTrackerReminderEvent($user));
                     }
                 });
