@@ -95,6 +95,7 @@ class DashboardController extends AccountBaseController
 
     public function widget(Request $request, $dashboardType)
     {
+        
         $data = $request->except('_token');
 
         // Step 1: Reset all widgets' status to 0

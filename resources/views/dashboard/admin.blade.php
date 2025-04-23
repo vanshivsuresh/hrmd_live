@@ -107,11 +107,13 @@ $viewFinanceDashboard = user()->permission('view_finance_dashboard');
                                 </li>
                                 @php
                                     $userModules = user_modules();
+
                                 @endphp
                                 @foreach ($widgets as $widget)
                                     @php
                                         $wname = \Illuminate\Support\Str::camel($widget->widget_name);
                                         $moduleName = $widgetToModuleMap[$widget->widget_name] ?? null;
+                                        
                                     @endphp
                                     @if ($moduleName && in_array($moduleName, $userModules))
                                     <li class="mb-2 float-left w-50">

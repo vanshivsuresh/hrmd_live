@@ -11,4 +11,5 @@ return [
     'script_name' => $addOnOf . '-recruit-module',
     'parent_product_name' => $addOnOf,
     'setting' => \Modules\Recruit\Entities\RecruitGlobalSetting::class,
+
 ];
