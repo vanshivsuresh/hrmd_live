@@ -64,6 +64,7 @@
                 </a>
             </div>
 
+
             <div class="col mb-4">
                 <a href="{{ route('job-appboard.index') }}" data-status="open" class="widget-filter-status">
                     <x-cards.widget :title="__('recruit::app.dashboard.totalApplications')"
