@@ -19,6 +19,7 @@ $addAttendancePermission = user()->permission('add_attendance');
             @php
                 $totalPresent = 0;
                 $totalLeaves = 0;
+                $totalHolidays = 0;
                 $userId = explode('#', $key);
                 $userId = $userId[0];
             @endphp
@@ -60,11 +61,18 @@ $addAttendancePermission = user()->permission('add_attendance');
                                     data-attendance-date="{{ $key2 }}"><i
                                         class="fa fa-times text-lightest"></i></a>
                             @elseif ($day == 'Holiday')
+                                @php
+                                    if (!$attendanceDate->isFuture()) {
+                                        $totalHolidays++;
+                                    }
+                                @endphp
+                                
                                 <a href="javascript:;" data-toggle="tooltip"
                                     data-original-title="{{ $holidayOccasions[$key2] }}"
                                     data-user-id="{{ $userId }}" data-attendance-date="{{ $key2 }}"><i
                                         class="fa fa-star text-warning"></i></a>
-                            @else
+                            @else                           
+
                                 @if ($day != '-')
                                     @php
                                         $totalPresent = $totalPresent + 1;
@@ -76,10 +84,14 @@ $addAttendancePermission = user()->permission('add_attendance');
                         </td>
                     @endif
                 @endforeach
-                <td class="text-dark f-w-500 text-right attendance-total px-2 w-100">
+                <td class="text-dark f-w-500 text-right attendance-total px-2 w-100"> 
                     <!-- {!! $totalPresent . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}</td> -->
-                    {!! (count($attendance) - 1) - ($totalLeaves) . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}
-            </tr>
+                    <!-- {!! (count($attendance) - 1) - ($totalLeaves) . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!} -->
+
+                    {!! $totalPresent + $totalHolidays . ' / <span class="text-lightest">' . (count($attendance) - 1) . '</span>' !!}
+
+                    
+            </tr> 
         @endforeach
     </x-table>
 </div>

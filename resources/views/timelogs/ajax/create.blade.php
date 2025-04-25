@@ -33,7 +33,6 @@
                                 </x-forms.select>
                             </div>
 
-
                             @if ($addTimelogPermission == 'all')
                                 <div class="col-md-6 col-lg-4">
                                     <x-forms.label class="mt-3" fieldId="user_id2"
@@ -64,57 +63,24 @@
                                     :fieldPlaceholder="__('placeholders.date')" />
                             </div>
 
-                            <!-- <div class="col-md-3 col-lg-3">
-                                <div class="bootstrap-timepicker timepicker">
-                                    <x-forms.text :fieldLabel="__('modules.timeLogs.startTime')"
-                                        :fieldPlaceholder="__('placeholders.hours')" fieldName="start_time"
-                                        fieldId="start_time" fieldRequired="true" />
-                                </div>
+                            <div class="col-md-3 col-lg-3">
+                                <x-forms.text :fieldLabel="__('modules.timeLogs.totalHours')"
+                                    :fieldPlaceholder="__('placeholders.total_hours')" fieldName="total_hours"
+                                    fieldId="total_hours" fieldRequired="true" />
                             </div>
-
-                            <div class="col-md-3 col-lg-3">
-                                <x-forms.datepicker fieldId="end_date" fieldRequired="true"
-                                    :fieldLabel="__('modules.timeLogs.endDate')" fieldName="end_date"
-                                    :fieldValue="now(company()->timezone)->format(company()->date_format)"
-                                    :fieldPlaceholder="__('placeholders.date')" />
-                            </div> 
-
-                            <div class="col-md-3 col-lg-3">
-                                <div class="bootstrap-timepicker timepicker">
-                                    <x-forms.text :fieldLabel="__('modules.timeLogs.endTime')"
-                                        :fieldPlaceholder="__('placeholders.hours')" fieldName="end_time"
-                                        fieldId="end_time" fieldRequired="true" />
-                                </div>
-                            </div> -->
-                            <div class="col-md-3 col-lg-3">
-                                <div class="bootstrap-timepicker timepicker">
-                                    <x-forms.text :fieldLabel="__('modules.timeLogs.totalHours')"
-                                        :fieldPlaceholder="__('placeholders.total_hours')" fieldName="total_hours"
-                                        fieldId="total_hours" fieldRequired="true" />
-                                </div>
-                            </div>
-
-
                         </div>
                     </div>
-
-                    <!-- <div class="col-md-6">
-                        <x-forms.text :fieldLabel="__('modules.timeLogs.memo')" fieldName="memo" fieldRequired="true"
-                            fieldId="memo" :fieldPlaceholder="__('placeholders.timelog.memo')" />
-                    </div>  -->
 
                     <div class="col-md-6">
                         <x-forms.textarea :fieldLabel="__('modules.timeLogs.memo')" fieldName="memo" fieldRequired="true"
                             fieldId="memo" :fieldPlaceholder="__('placeholders.timelog.memo')" />
                     </div>
 
-
                     <!-- <div class="col-md-6">
                         <x-forms.label fieldId="total_time" class="my-3"
                             :fieldLabel="__('modules.timeLogs.totalHours')" />
                         <p id="total_time" class="f-w-500 text-primary f-21">0 @lang('app.hrs')</p>
                     </div> -->
-
                 </div>
                 <x-forms.custom-field :fields="$fields"></x-forms.custom-field>
 
@@ -126,182 +92,108 @@
                 </x-form-actions>
             </div>
         </x-form>
-
     </div>
 </div>
 
 <script>
     $(document).ready(function() {
-        $('.custom-date-picker').each(function(ind, el) {
-            datepicker(el, {
-                position: 'bl',
-                ...datepickerConfig
-            });
-        });
-
+        // Initialize datepickers
         const dp1 = datepicker('#start_date', {
             position: 'bl',
-            onSelect: (instance, date) => {
-                if (typeof dp2.dateSelected !== 'undefined' && dp2.dateSelected.getTime() < date
-                    .getTime()) {
-                    dp2.setDate(date, true)
-                }
-                if (typeof dp2.dateSelected === 'undefined') {
-                    dp2.setDate(date, true)
-                }
-                dp2.setMin(date);
-                calculateTime();
-            },
             ...datepickerConfig
         });
 
-        const dp2 = datepicker('#end_date', {
-            position: 'bl',
-            onSelect: (instance, date) => {
-                dp1.setMax(date);
-                calculateTime();
-            },
-            ...datepickerConfig
-        });
-
-        $('#start_time, #end_time').timepicker({
-            @if (company()->time_format == 'H:i')
-                showMeridian: false,
-            @endif
-        }).on('hide.timepicker', function(e) {
-            calculateTime();
-        });
-
-        $('#project_id2').change(function() {
-            var id = $(this).val();
-            if (id == '') {
-                id = 0;
-            }
-            var url = "{{ route('tasks.project_tasks', ':id').'?for_timelogs=true' }}";
-            url = url.replace(':id', id);
-            $.easyAjax({
-                url: url,
-                type: "GET",
-                container: '#save-timelog-data-form',
-                blockUI: true,
-                redirect: true,
-                success: function(data) {
-                    $('#task_id2').html(data.data);
-                    $('#task_id2').selectpicker('refresh');
-                }
-            })
-        });
-
-        $('#task_id2').change(function() {
-            var id = $(this).val();
-            if (id == '') {
-                id = 0;
-            }
-            var url = "{{ route('tasks.members', ':id') }}";
-            url = url.replace(':id', id);
-            $.easyAjax({
-                url: url,
-                type: "GET",
-                container: '#save-timelog-data-form',
-                blockUI: true,
-                redirect: true,
-                success: function(data) {
-                    $('#user_id2').html(data.data);
-                    $('#user_id2').selectpicker('refresh');
-                }
-            })
-        });
-
-        $('#save-timelog-form').click(function() {
-            const url = "{{ route('timelogs.store') }}";
+        // Form submission handler
+        $('#save-timelog-form').on('click', function(e) {
+            e.preventDefault();
             
-            // new code.
-            // if ($('#project_id2').val() === '' || $('#task_id2').val() === '' || 
-            //     $('#user_id2').val() === '' || $('#total_hours').val() === '') {
-            //     Swal.fire({
-            //         icon: 'error',
-            //         title: 'Error',
-            //         text: 'Please fill all required fields',
-            //         customClass: {
-            //             confirmButton: 'btn btn-primary',
-            //         },
-            //         buttonsStyling: false
-            //     });
-            //     return false;
-            // }
-            // end new code.
+            // Validate required fields
+            if ($('#project_id2').val() === '' || 
+                $('#task_id2').val() === '' || 
+                $('#total_hours').val() === '' || 
+                $('#memo').val() === '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Please fill all required fields',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                    },
+                    buttonsStyling: false
+                });
+                return false;
+            }
 
+            // Submit form via AJAX
             $.easyAjax({
-                url: url,
+                url: "{{ route('timelogs.store') }}",
                 container: '#save-timelog-data-form',
                 type: "POST",
                 disableButton: true,
                 blockUI: true,
-                // file: true,
                 buttonSelector: "#save-timelog-form",
                 data: $('#save-timelog-data-form').serialize(),
                 success: function(response) {
                     if (response.status == 'success') {
                         if ($(RIGHT_MODAL).hasClass('in')) {
                             document.getElementById('close-task-detail').click();
-                            window.LaravelDataTables["timelogs-table"].draw(true);
+                            if (typeof window.LaravelDataTables["timelogs-table"] !== 'undefined') {
+                                window.LaravelDataTables["timelogs-table"].draw(true);
+                            }
                         } else {
                             window.location.href = response.redirectUrl;
                         }
                     }
+                },
+                error: function(xhr) {
+                    console.error('Error:', xhr.responseText);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred while saving',
+                        customClass: {
+                            confirmButton: 'btn btn-primary',
+                        },
+                        buttonsStyling: false
+                    });
                 }
             });
         });
 
-        function calculateTime() {
-            var format = '{{ company()->moment_date_format }}';
-            var timeFormat = '{{ company()->time_format }}';
-            var startDate = $('#start_date').val();
-            var endDate = $('#end_date').val();
-            var startTime = $("#start_time").val();
-            var endTime = $("#end_time").val();
-
-            $.ajax({
-                url: "{{ route('calculateTime') }}",
-                type: 'POST',
-                data: {
-                    start_date: startDate,
-                    end_date: endDate,
-                    start_time: startTime,
-                    end_time: endTime,
-                    format: format,
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response) {
-                    if (response.status === 'error') {
-                        Swal.fire({
-                            icon: 'warning',
-                            text: response.message,
-                            customClass: {
-                                confirmButton: 'btn btn-primary',
-                            },
-                            showClass: {
-                                popup: 'swal2-noanimation',
-                                backdrop: 'swal2-noanimation'
-                            },
-                            buttonsStyling: false
-                        });
-
-                        $('#end_time').val(startTime);
-                    } else {
-                        console.log(response);
-                        var hours = response.hours;
-                        var minutes = response.minutes;
-                        $('#total_time').html(hours + " Hrs " + minutes + " Mins");
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
+        // Project change handler
+        $('#project_id2').change(function() {
+            var id = $(this).val() || 0;
+            var url = "{{ route('tasks.project_tasks', ':id').'?for_timelogs=true' }}";
+            
+            $.easyAjax({
+                url: url.replace(':id', id),
+                type: "GET",
+                container: '#save-timelog-data-form',
+                blockUI: true,
+                success: function(data) {
+                    $('#task_id2').html(data.data);
+                    $('#task_id2').selectpicker('refresh');
                 }
             });
-        }
+        });
+
+        // Task change handler
+        $('#task_id2').change(function() {
+            var id = $(this).val() || 0;
+            var url = "{{ route('tasks.members', ':id') }}";
+            
+            $.easyAjax({
+                url: url.replace(':id', id),
+                type: "GET",
+                container: '#save-timelog-data-form',
+                blockUI: true,
+                success: function(data) {
+                    $('#user_id2').html(data.data);
+                    $('#user_id2').selectpicker('refresh');
+                }
+            });
+        });
 
         init(RIGHT_MODAL);
     });
-
 </script>

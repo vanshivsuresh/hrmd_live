@@ -183,67 +183,134 @@ class TimelogController extends AccountBaseController
 
     }
 
+
+//     public function store(StoreTimeLog $request)
+//     {       
+    
+//         $startDateTime = Carbon::createFromFormat($this->company->date_format, $request->start_date, $this->company->timezone)->format('Y-m-d') . ' ' . Carbon::createFromFormat($this->company->time_format, $request->start_time)->format('H:i:s');
+//         $startDateTime = Carbon::parse($startDateTime, $this->company->timezone)->setTimezone('UTC');
+
+//         $endDateTime = Carbon::createFromFormat($this->company->date_format, $request->end_date, $this->company->timezone)->format('Y-m-d') . ' ' . Carbon::createFromFormat($this->company->time_format, $request->end_time)->format('H:i:s');
+//         $endDateTime = Carbon::parse($endDateTime, $this->company->timezone)->setTimezone('UTC');
+
+//         $timeLog = new ProjectTimeLog();
+
+//         if ($request->has('project_id')) {
+//             $timeLog->project_id = $request->project_id;
+//         }
+
+//         $timeLog->task_id = $request->task_id;
+//         $timeLog->user_id = $request->user_id;
+//         $userID = $request->user_id;
+
+//         $activeTimer = ProjectTimeLog::with('user')
+//             ->where(function ($query) use ($startDateTime, $endDateTime) {
+//                 $query->where(
+//                     function ($q1) use ($startDateTime, $endDateTime) {
+//                         $q1->where('end_time', '>', $startDateTime->format('Y-m-d H:i:s'));
+//                         $q1->where('end_time', '<', $endDateTime->format('Y-m-d H:i:s'));
+//                     }
+//                 )
+//                     ->orWhere(
+//                         function ($q1) use ($startDateTime) {
+//                             $q1->whereDate('start_time', $startDateTime->format('Y-m-d'));
+//                             $q1->whereNull('end_time');
+//                         }
+//                     );
+//             })
+//             ->join('users', 'users.id', '=', 'project_time_logs.user_id')
+//             ->where('user_id', $userID)
+//             ->first();
+
+//         if (is_null($activeTimer)) {
+//             $timeLog->start_time = $startDateTime;
+//             $timeLog->end_time = $endDateTime;
+//             $timeLog->total_hours = $endDateTime->diffInHours($startDateTime);
+//             $timeLog->total_minutes = $endDateTime->diffInMinutes($startDateTime);
+
+// //            $timeLog->total_hours = $timeLog->end_time->diffInHours($timeLog->start_time);
+// //            $timeLog->total_minutes = $timeLog->end_time->diffInMinutes($timeLog->start_time);
+//             $timeLog->hourly_rate = 0;
+//             $timeLog->memo = $request->memo;
+//             $timeLog->edited_by_user = user()->id;
+//             $timeLog->save();
+
+//             if ($request->custom_fields_data) {
+//                 $timeLog->updateCustomFieldData($request->custom_fields_data);
+//             }
+
+//             return Reply::successWithData(__('messages.timeLogAdded'), ['redirectUrl' => route('timelogs.index')]);
+//         }
+
+//         return Reply::error(__('messages.timelogAlreadyExist'));
+//     }
+
+
     public function store(StoreTimeLog $request)
     {
-        
-    
-        $startDateTime = Carbon::createFromFormat($this->company->date_format, $request->start_date, $this->company->timezone)->format('Y-m-d') . ' ' . Carbon::createFromFormat($this->company->time_format, $request->start_time)->format('H:i:s');
-        $startDateTime = Carbon::parse($startDateTime, $this->company->timezone)->setTimezone('UTC');
-
-        $endDateTime = Carbon::createFromFormat($this->company->date_format, $request->end_date, $this->company->timezone)->format('Y-m-d') . ' ' . Carbon::createFromFormat($this->company->time_format, $request->end_time)->format('H:i:s');
-        $endDateTime = Carbon::parse($endDateTime, $this->company->timezone)->setTimezone('UTC');
+        if ($request->has('total_hours') && $request->total_hours) {
+            // Handle direct hours entry
+            $endDateTime = Carbon::now($this->company->timezone)->setTimezone('UTC');
+            $startDateTime = (clone $endDateTime)->subHours($request->total_hours);
+        } else {
+            // Handle time range entry
+            $startDateTime = Carbon::createFromFormat(
+                $this->company->date_format.' '.$this->company->time_format,
+                $request->start_date.' '.$request->start_time,
+                $this->company->timezone
+            )->setTimezone('UTC');
+            
+            $endDateTime = Carbon::createFromFormat(
+                $this->company->date_format.' '.$this->company->time_format,
+                $request->end_date.' '.$request->end_time,
+                $this->company->timezone
+            )->setTimezone('UTC');
+        }
 
         $timeLog = new ProjectTimeLog();
-
+        
         if ($request->has('project_id')) {
             $timeLog->project_id = $request->project_id;
         }
 
         $timeLog->task_id = $request->task_id;
         $timeLog->user_id = $request->user_id;
-        $userID = $request->user_id;
 
-        $activeTimer = ProjectTimeLog::with('user')
-            ->where(function ($query) use ($startDateTime, $endDateTime) {
-                $query->where(
-                    function ($q1) use ($startDateTime, $endDateTime) {
-                        $q1->where('end_time', '>', $startDateTime->format('Y-m-d H:i:s'));
-                        $q1->where('end_time', '<', $endDateTime->format('Y-m-d H:i:s'));
-                    }
-                )
-                    ->orWhere(
-                        function ($q1) use ($startDateTime) {
-                            $q1->whereDate('start_time', $startDateTime->format('Y-m-d'));
-                            $q1->whereNull('end_time');
-                        }
-                    );
+        // Check for existing timers
+        $activeTimer = ProjectTimeLog::where('user_id', $request->user_id)
+            ->where(function($query) use ($startDateTime, $endDateTime) {
+                $query->whereBetween('end_time', [$startDateTime, $endDateTime])
+                    ->orWhere(function($q) use ($startDateTime) {
+                        $q->whereDate('start_time', $startDateTime->format('Y-m-d'))
+                            ->whereNull('end_time');
+                    });
             })
-            ->join('users', 'users.id', '=', 'project_time_logs.user_id')
-            ->where('user_id', $userID)
             ->first();
 
-        if (is_null($activeTimer)) {
-            $timeLog->start_time = $startDateTime;
-            $timeLog->end_time = $endDateTime;
-            $timeLog->total_hours = $endDateTime->diffInHours($startDateTime);
-            $timeLog->total_minutes = $endDateTime->diffInMinutes($startDateTime);
+        if ($activeTimer) {
 
-//            $timeLog->total_hours = $timeLog->end_time->diffInHours($timeLog->start_time);
-//            $timeLog->total_minutes = $timeLog->end_time->diffInMinutes($timeLog->start_time);
-            $timeLog->hourly_rate = 0;
-            $timeLog->memo = $request->memo;
-            $timeLog->edited_by_user = user()->id;
-            $timeLog->save();
-
-            if ($request->custom_fields_data) {
-                $timeLog->updateCustomFieldData($request->custom_fields_data);
-            }
-
-            return Reply::successWithData(__('messages.timeLogAdded'), ['redirectUrl' => route('timelogs.index')]);
+            
+            return Reply::error(__('messages.timelogAlreadyExist'));
         }
 
-        return Reply::error(__('messages.timelogAlreadyExist'));
+        $timeLog->start_time = $startDateTime;
+        $timeLog->end_time = $endDateTime;
+        $timeLog->total_hours = $endDateTime->diffInHours($startDateTime);
+        $timeLog->total_minutes = $endDateTime->diffInMinutes($startDateTime);
+        $timeLog->hourly_rate = 0;
+        $timeLog->memo = $request->memo;
+        $timeLog->edited_by_user = user()->id;
+        $timeLog->save();
+
+        if ($request->custom_fields_data) {
+            $timeLog->updateCustomFieldData($request->custom_fields_data);
+        }
+
+        return Reply::successWithData(__('messages.timeLogAdded'), [
+            'redirectUrl' => route('timelogs.index')
+        ]);
     }
+
 
     public function destroy($id)
     {

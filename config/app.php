@@ -254,6 +254,7 @@ return [
         Barryvdh\TranslationManager\ManagerServiceProvider::class,
         Macellan\Zip\ZipServiceProvider::class,
 
+
         // HRMS
         App\Providers\SuperAdmin\EventServiceProvider::class,
     ],

@@ -32,6 +32,9 @@ class Module extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
+    //    echo 'modules';
+       
         return 'modules';
+        
     }
 }

@@ -87,6 +87,7 @@ class AttendanceReportDataTable extends BaseDataTable
             ->addColumn('hours_clocked', fn($row) => $this->calculateHours($period, $row))
             ->addColumn('late_day_count', fn($row) => Attendance::countDaysLateByUser($startDate, $endDate, $row->id) ?: '0')
             ->addColumn('half_day_count', fn($row) => Attendance::countHalfDaysByUser($startDate, $endDate, $row->id) ?: '0')
+
             ->orderColumn('present_days', 'user_id $1')
             ->orderColumn('absent_days', 'user_id $1')
             ->orderColumn('extra_days', 'user_id $1')
@@ -158,6 +159,9 @@ class AttendanceReportDataTable extends BaseDataTable
             __('modules.attendance.hoursClocked') => ['data' => 'hours_clocked', 'name' => 'hours_clocked', 'title' => __('modules.attendance.hoursClocked')],
             __('app.days') . ' ' . __('modules.attendance.late') => ['data' => 'late_day_count', 'name' => 'late_day_count', 'title' => __('app.days') . ' ' . __('modules.attendance.late')],
             __('modules.attendance.halfDay') => ['data' => 'half_day_count', 'name' => 'half_day_count', 'title' => __('modules.attendance.halfDay')],
+
+
+
         ];
     }
 

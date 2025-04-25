@@ -298,6 +298,7 @@ return array(
         'on_contract' => 'On Contract',
         'internship' => 'Internship',
         'trainee' => 'Trainee',
+        'permanent_address'=>'PermanentAddress',
         'activities' => [
             'leave-created' => 'Leave is created',
             'leave-updated' => 'Leave is updated',

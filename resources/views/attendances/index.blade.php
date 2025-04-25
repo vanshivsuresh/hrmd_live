@@ -186,6 +186,46 @@
 @push('scripts')
 
     <script>
+        function initStickyThead() {
+            const table = document.getElementById('example');
+            if (!table) return;
+
+            const thead = table.querySelector('thead');
+            if (!thead) return;
+
+            window.addEventListener('scroll', function () {
+                const tableRect = table.getBoundingClientRect();
+                if (tableRect.top <= 0 && tableRect.bottom > thead.offsetHeight) {
+                    thead.style.position = 'fixed';
+                    thead.style.top = '108';
+                    thead.style.width = table.offsetWidth + 'px';
+                } else {
+                    thead.style.position = '';
+                    thead.style.top = '';
+                    thead.style.width = '';
+                }
+            });
+        }
+
+        // Option 1: Call manually after AJAX
+        // Example: after your AJAX loads table data
+        // $.ajax({ ... }).done(function() {
+        //     initStickyThead();
+        // });
+
+        // Option 2: MutationObserver to detect when the table is added
+        const observer = new MutationObserver(function (mutations, obs) {
+            const table = document.getElementById('example');
+            if (table && table.querySelector('thead')) {
+                initStickyThead();
+                obs.disconnect(); // Stop observing once initialized
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
 
         $('#user_id, #department, #designation, #month, #year').on('change', function () {
             if ($('#user_id').val() != "all") {

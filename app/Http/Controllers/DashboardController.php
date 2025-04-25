@@ -32,11 +32,9 @@ use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-
 class DashboardController extends AccountBaseController
 {
-
-    use  CurrencyExchange, OverviewDashboard, EmployeeDashboard, ProjectDashboard, ClientDashboard, HRDashboard, TicketDashboard, FinanceDashboard, ClientPanelDashboard;
+    use CurrencyExchange, OverviewDashboard, EmployeeDashboard, ProjectDashboard, ClientDashboard, HRDashboard, TicketDashboard, FinanceDashboard, ClientPanelDashboard;
 
     public function __construct()
     {
@@ -49,36 +47,37 @@ class DashboardController extends AccountBaseController
 
             return $next($request);
         });
-
     }
 
-    /**
-     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response|mixed|void
-     */
     public function index()
     {
-
-        //$this->isCheckScript();
         session()->forget(['qr_clock_in']);
         $this->weeklyTimesheet = WeeklyTimesheet::where('weekly_timesheets.status', 'pending');
 
-        // dd("thi is the weeklytimesheets data===>>",$this->weeklyTimesheet->get());
+        $this->pendingLeaves = Leave::where('leaves.status', 'pending');
 
         if (user()->reportingTeam->count() > 0 && !in_array('admin', user_roles())) {
             $this->weeklyTimesheet = $this->weeklyTimesheet->join('users', 'weekly_timesheets.user_id', 'users.id')
-            ->join('employee_details', 'employee_details.user_id', 'users.id')
-            ->whereIn('employee_details.reporting_to', [user()->id]);
+                ->join('employee_details', 'employee_details.user_id', 'users.id')
+                ->whereIn('employee_details.reporting_to', [user()->id]);
+
+            $this->pendingLeaves = $this->pendingLeaves->join('users', 'leaves.user_id', 'users.id')
+                ->join('employee_details', 'employee_details.user_id', 'users.id')
+                ->whereIn('employee_details.reporting_to', [user()->id]);
         } elseif (user()->reportingTeam->count() == 0 && !in_array('admin', user_roles())) {
             $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.user_id', user()->id);
+            $this->pendingLeaves = $this->pendingLeaves->where('leaves.user_id', user()->id);
         }
 
         if (request()->id) {
             $this->weeklyTimesheet = $this->weeklyTimesheet->where('weekly_timesheets.id', request()->id);
+            $this->pendingLeaves = $this->pendingLeaves->where('leaves.id', request()->id);
         }
 
         $this->weeklyTimesheet = $this->weeklyTimesheet->select('weekly_timesheets.*')->get();
-        if (in_array('employee', user_roles())) {
+        $this->pendingLeaves = $this->pendingLeaves->select('leaves.*')->get();
 
+        if (in_array('employee', user_roles())) {
             $this->viewOverviewDashboard = user()->permission('view_overview_dashboard');
             $this->viewProjectDashboard = user()->permission('view_project_dashboard');
             $this->viewClientDashboard = user()->permission('view_client_dashboard');
@@ -96,6 +95,7 @@ class DashboardController extends AccountBaseController
 
     public function widget(Request $request, $dashboardType)
     {
+        
         $data = $request->except('_token');
 
         // Step 1: Reset all widgets' status to 0
@@ -116,14 +116,10 @@ class DashboardController extends AccountBaseController
     public function checklist()
     {
         if (in_array('admin', user_roles())) {
-
             return view('dashboard.checklist', $this->data);
         }
     }
 
-    /**
-     * @return array|\Illuminate\Http\Response
-     */
     public function memberDashboard()
     {
         abort_403(!in_array('employee', user_roles()));
@@ -133,7 +129,6 @@ class DashboardController extends AccountBaseController
 
     public function advancedDashboard()
     {
-
         if (in_array('admin', user_roles()) || $this->sidebarUserPermissions['view_overview_dashboard'] == 4
             || $this->sidebarUserPermissions['view_project_dashboard'] == 4
             || $this->sidebarUserPermissions['view_client_dashboard'] == 4
@@ -160,12 +155,10 @@ class DashboardController extends AccountBaseController
                 'project_activity_timeline' => 'projects',
                 'user_activity_timeline' => 'users',
                 'timelogs' => 'timelogs',
-
                 'total_project' => 'projects',
                 'total_overdue_project' => 'projects',
                 'status_wise_project' => 'projects',
                 'pending_milestone' => 'projects',
-
                 'total_leads' => 'leads',
                 'total_lead_conversions' => 'leads',
                 'total_contracts_generated' => 'contracts',
@@ -177,7 +170,6 @@ class DashboardController extends AccountBaseController
                 'latest_client' => 'leads',
                 'recent_login_activities' => 'clients',
                 'total_deals' => 'leads',
-
                 'total_leaves_approved' => 'leaves',
                 'total_new_employee' => 'employees',
                 'total_employee_exits' => 'employees',
@@ -191,13 +183,11 @@ class DashboardController extends AccountBaseController
                 'headcount' => 'employees',
                 'joining_vs_attrition' => 'employees',
                 'birthday' => 'employees',
-
                 'total_tickets' => 'tickets',
                 'total_unassigned_ticket' => 'tickets',
                 'type_wise_ticket' => 'tickets',
                 'status_wise_ticket' => 'tickets',
                 'channel_wise_ticket' => 'tickets',
-
                 'total_paid_invoices' => 'invoices',
                 'total_expenses' => 'expenses',
                 'total_earnings' => 'invoices',
@@ -207,57 +197,45 @@ class DashboardController extends AccountBaseController
                 'proposal_overview' => 'leads',
                 'earnings_by_client' => 'clients',
                 'earnings_by_projects' => 'projects',
-
             ];
 
             switch ($tab) {
-            case 'project':
-                $this->projectDashboard();
-                break;
-            case 'client':
-                $this->clientDashboard();
-                break;
-            case 'hr':
-                $this->hrDashboard();
-                break;
-            case 'ticket':
-                $this->ticketDashboard();
-                break;
-            case 'finance':
-                $this->financeDashboard();
-                break;
-            default:
-                if (in_array('admin', user_roles()) || $this->sidebarUserPermissions['view_overview_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'overview';
-                    $this->overviewDashboard();
-
-                }
-                elseif ($this->sidebarUserPermissions['view_project_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'project';
+                case 'project':
                     $this->projectDashboard();
-
-                }
-                elseif ($this->sidebarUserPermissions['view_client_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'client';
+                    break;
+                case 'client':
                     $this->clientDashboard();
-
-                }
-                elseif ($this->sidebarUserPermissions['view_hr_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'hr';
+                    break;
+                case 'hr':
                     $this->hrDashboard();
-
-                }
-                elseif ($this->sidebarUserPermissions['view_finance_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'finance';
+                    break;
+                case 'ticket':
                     $this->ticketDashboard();
-
-                }
-                else if ($this->sidebarUserPermissions['view_ticket_dashboard'] == 4) {
-                    $this->activeTab = $tab ?: 'finance';
+                    break;
+                case 'finance':
                     $this->financeDashboard();
-                }
-
-                break;
+                    break;
+                default:
+                    if (in_array('admin', user_roles()) || $this->sidebarUserPermissions['view_overview_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'overview';
+                        $this->overviewDashboard();
+                    } elseif ($this->sidebarUserPermissions['view_project_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'project';
+                        $this->projectDashboard();
+                    } elseif ($this->sidebarUserPermissions['view_client_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'client';
+                        $this->clientDashboard();
+                    } elseif ($this->sidebarUserPermissions['view_hr_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'hr';
+                        $this->hrDashboard();
+                    } elseif ($this->sidebarUserPermissions['view_finance_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'finance';
+                        $this->ticketDashboard();
+                    } else if ($this->sidebarUserPermissions['view_ticket_dashboard'] == 4) {
+                        $this->activeTab = $tab ?: 'finance';
+                        $this->financeDashboard();
+                    }
+                    break;
             }
 
             if (request()->ajax()) {
@@ -284,7 +262,7 @@ class DashboardController extends AccountBaseController
         $this->timelogDate = $timelogDate = Carbon::parse(request()->date);
         $this->weekStartDate = $now->copy()->startOfWeek($attndcSetting->week_start_from);
         $this->weekEndDate = $this->weekStartDate->copy()->addDays(7);
-        $this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekStartDate->copy()->addDays(6)); // Get All Dates from start to end date
+        $this->weekPeriod = CarbonPeriod::create($this->weekStartDate, $this->weekStartDate->copy()->addDays(6));
 
         $this->dateWiseTimelogs = ProjectTimeLog::dateWiseTimelogs($timelogDate->toDateString(), user()->id);
         $this->dateWiseTimelogBreak = ProjectTimeLogBreak::dateWiseTimelogBreak($timelogDate->toDateString(), user()->id);
@@ -326,7 +304,6 @@ class DashboardController extends AccountBaseController
         $startDate = Carbon::parse(request('start'));
         $endDate = Carbon::parse(request('end'));
 
-        // get calendar view current logined user
         $calendar_filter_array = explode(',', user()->employeeDetail->calendar_view);
 
         $eventData = array();
@@ -334,22 +311,16 @@ class DashboardController extends AccountBaseController
         $viewEventPerm = user()->permission('view_events');
 
         if (!is_null($viewEventPerm) && $viewEventPerm != 'none') {
-
             if (in_array('events', $calendar_filter_array)) {
-                // Events
                 $model = Event::with('attendee', 'attendee.user');
-
                 $model->where(function ($query) {
                     $query->whereHas('attendee', function ($query) {
                         $query->where('user_id', user()->id);
                     });
                     $query->orWhere('added_by', user()->id);
                 });
-
                 $model->whereBetween('start_date_time', [$startDate->toDateString(), $endDate->toDateString()]);
-
                 $events = $model->get();
-
 
                 foreach ($events as $event) {
                     $eventData[] = [
@@ -362,29 +333,28 @@ class DashboardController extends AccountBaseController
                     ];
                 }
             }
-
         }
+
         $user = user();
         $viewHolidayPerm = user()->permission('view_holiday');
 
         if (!is_null($viewHolidayPerm) && $viewHolidayPerm != 'none') {
             if (in_array('holiday', $calendar_filter_array)) {
-                // holiday
                 $holidays = Holiday::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
                     ->where(function ($query) use ($user) {
                         $query->where(function ($subquery) use ($user) {
-                                $subquery->where(function ($q) use ($user) {
-                                    $q->where('department_id_json', 'like', '%"' . $user->employeeDetail->department_id . '"%')
-                                        ->orWhereNull('department_id_json');
-                                });
-                                $subquery->where(function ($q) use ($user) {
-                                    $q->where('designation_id_json', 'like', '%"' . $user->employeeDetail->designation_id . '"%')
-                                        ->orWhereNull('designation_id_json');
-                                });
-                                $subquery->where(function ($q) use ($user) {
-                                    $q->where('employment_type_json', 'like', '%"' . $user->employeeDetail->employment_type . '"%')
-                                        ->orWhereNull('employment_type_json');
-                                });
+                            $subquery->where(function ($q) use ($user) {
+                                $q->where('department_id_json', 'like', '%"' . $user->employeeDetail->department_id . '"%')
+                                    ->orWhereNull('department_id_json');
+                            });
+                            $subquery->where(function ($q) use ($user) {
+                                $q->where('designation_id_json', 'like', '%"' . $user->employeeDetail->designation_id . '"%')
+                                    ->orWhereNull('designation_id_json');
+                            });
+                            $subquery->where(function ($q) use ($user) {
+                                $q->where('employment_type_json', 'like', '%"' . $user->employeeDetail->employment_type . '"%')
+                                    ->orWhereNull('employment_type_json');
+                            });
                         });
                     });
                 $holidays = $holidays->get();
@@ -400,17 +370,13 @@ class DashboardController extends AccountBaseController
                     ];
                 }
             }
-
         }
 
         $viewTaskPerm = user()->permission('view_tasks');
 
         if (!is_null($viewTaskPerm) && $viewTaskPerm != 'none') {
-
             if (in_array('task', $calendar_filter_array)) {
-                // tasks
                 $completedTaskColumn = TaskboardColumn::completeColumn();
-
                 $tasks = Task::with('boardColumn')
                     ->where('board_column_id', '<>', $completedTaskColumn->id)
                     ->whereHas('users', function ($query) {
@@ -418,7 +384,6 @@ class DashboardController extends AccountBaseController
                     })
                     ->where(function ($q) use ($startDate, $endDate) {
                         $q->whereBetween(DB::raw('DATE(tasks.`due_date`)'), [$startDate->toDateString(), $endDate->toDateString()]);
-
                         $q->orWhereBetween(DB::raw('DATE(tasks.`start_date`)'), [$startDate->toDateString(), $endDate->toDateString()]);
                     })->get();
 
@@ -438,9 +403,7 @@ class DashboardController extends AccountBaseController
         $viewTicketPerm = user()->permission('view_tickets');
 
         if (!is_null($viewTicketPerm) && $viewTicketPerm != 'none') {
-
             if (in_array('tickets', $calendar_filter_array)) {
-                // tickets
                 $tickets = Ticket::where('user_id', user()->id)
                     ->whereBetween(DB::raw('DATE(tickets.`updated_at`)'), [$startDate->toDateTimeString(), $endDate->endOfDay()->toDateTimeString()])->get();
 
@@ -455,15 +418,12 @@ class DashboardController extends AccountBaseController
                     ];
                 }
             }
-
         }
 
         $viewleavePerm = user()->permission('view_leave');
 
         if (!is_null($viewleavePerm) && $viewleavePerm != 'none') {
-
             if (in_array('leaves', $calendar_filter_array)) {
-                // approved leaves of all emoloyees with employee name
                 $leaves = Leave::join('leave_types', 'leave_types.id', 'leaves.leave_type_id')
                     ->where('leaves.status', 'approved')
                     ->select('leaves.id', 'leaves.leave_date', 'leaves.status', 'leave_types.type_name', 'leave_types.color', 'leaves.leave_date', 'leaves.duration', 'leaves.status', 'leaves.user_id')
@@ -473,14 +433,12 @@ class DashboardController extends AccountBaseController
 
                 foreach ($leaves as $leave) {
                     $duration = ($leave->duration == 'half day') ? '( ' . __('app.halfday') . ' )' : '';
-
                     $eventData[] = [
                         'id' => $leave->id,
                         'title' => $duration . ' ' . $leave->user->name,
                         'start' => $leave->leave_date->toDateString(),
                         'end' => $leave->leave_date->toDateString(),
                         'event_type' => 'leave',
-                        /** @phpstan-ignore-next-line */
                         'extendedProps' => ['name' => 'Leave : ' . $leave->user->name, 'bg_color' => $leave->color, 'color' => '#fff', 'icon' => 'fa-plane-departure']
                     ];
                 }
@@ -490,15 +448,12 @@ class DashboardController extends AccountBaseController
         $viewDealPerm = user()->permission('view_deals');
 
         if (!is_null($viewDealPerm) && $viewDealPerm != 'none') {
-
             if (in_array('follow_ups', $calendar_filter_array)) {
-                // follow ups
                 $followUps = DealFollowUp::with('lead')->whereHas('lead.leadAgent', function ($query) {
-                        $query->where('user_id', user()->id);
+                    $query->where('user_id', user()->id);
                 })
                     ->whereBetween(DB::raw('DATE(next_follow_up_date)'), [$startDate->startOfDay()->toDateTimeString(), $endDate->endOfDay()->toDateTimeString()])
                     ->get();
-
 
                 foreach ($followUps as $followUp) {
                     $eventData[] = [
@@ -511,7 +466,6 @@ class DashboardController extends AccountBaseController
                     ];
                 }
             }
-
         }
 
         return $eventData;
@@ -525,21 +479,18 @@ class DashboardController extends AccountBaseController
         $endDate = $this->endDate->toDateString();
 
         $this->leadPipelines = LeadPipeline::all();
-
         $this->leadStatusChart = $this->leadStatusChart($startDate, $endDate, $pipelineId);
 
         return $this->returnAjax('dashboard.ajax.lead-by-pipeline');
-
     }
 
     public function beamAuth()
     {
-        $userID = 'wrkst-'.user()->id;
+        $userID = 'wrkst-' . user()->id;
         $userIDInQueryParam = request()->user_id;
 
         if ($userID != $userIDInQueryParam) {
             return response('Inconsistent request', 401);
-
         } else {
             $beamsClient = new \Pusher\PushNotifications\PushNotifications([
                 'instanceId' => push_setting()->instance_id,
@@ -549,7 +500,6 @@ class DashboardController extends AccountBaseController
             $beamsToken = $beamsClient->generateToken($userID);
             return response()->json($beamsToken);
         }
-
     }
 
     public function sendPushNotifications($usersIDs, $title, $body)
@@ -557,32 +507,29 @@ class DashboardController extends AccountBaseController
         $setting = PushNotificationSetting::first();
         if ($setting->beams_push_status && count($usersIDs) > 0) {
             $beamsClient = new \Pusher\PushNotifications\PushNotifications([
-            'instanceId' =>  $setting->instance_id,
-            'secretKey' =>  $setting->beam_secret,
+                'instanceId' => $setting->instance_id,
+                'secretKey' => $setting->beam_secret,
             ]);
 
-
             $pushIDs = [];
-
             foreach ($usersIDs[0] as $key => $uid) {
                 $pushIDs[] = 'wrkst-' . $uid;
             }
 
             $publishResponse = $beamsClient->publishToUsers(
-            $pushIDs,
-            array(
-              'web' => array(
-                'notification' => array(
-                  'title' => $title,
-                  'body' => $body,
-                  'icon' => companyOrGlobalSetting()->logo_url
-                  )
-              )
-            ));
+                $pushIDs,
+                array(
+                    'web' => array(
+                        'notification' => array(
+                            'title' => $title,
+                            'body' => $body,
+                            'icon' => companyOrGlobalSetting()->logo_url
+                        )
+                    )
+                )
+            );
         }
 
         return true;
     }
-
-
 }

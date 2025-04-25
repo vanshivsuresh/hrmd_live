@@ -17,7 +17,10 @@ class EmployeeImport implements ToArray
             array('id' => 'employee_id', 'name' => __('modules.employees.employeeId'), 'required' => 'Yes'),
             array('id' => 'joining_date', 'name' => __('modules.employees.joiningDate'), 'required' => 'Yes'),
             array('id' => 'address', 'name' => __('app.address'), 'required' => 'No'),
-            array('id' => 'hourly_rate', 'name' => __('modules.employees.hourlyRate'), 'required' => 'No'),
+            array('id' => 'hourly_rate', 'name' => __('modules.employees.hourlyRate'), 'required' => 'No')
+
+           // array('id' => 'Permanent Address', 'name' => __('modules.employees.permanent_address'), 'required' => 'Yes')
+,
         );
     }
 

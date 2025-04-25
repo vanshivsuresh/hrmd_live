@@ -23,6 +23,10 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class AttendanceExport implements FromCollection, WithHeadings, WithMapping, WithEvents
 {
+
+    /**
+     * @return Collection
+     */
     public static $sum;
     public $year;
     public $month;
@@ -82,17 +86,17 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     public function headings(): array
     {
-        $arr = [];
-        $period = CarbonPeriod::create($this->startdate, $this->enddate);
+        $arr = array();
+        $period = CarbonPeriod::create($this->startdate, $this->enddate); // Get All Dates from start to end date
         $arr[] = __('app.empdate');
 
         foreach ($period->toArray() as $date) {
             $arr[] = $date->format('d-m-Y');
         }
 
-        $arr[] = __('app.Total');
-
-        return [$arr];
+        return [
+            $arr,
+        ];
     }
 
     public function collection()
@@ -106,10 +110,12 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         if ($id != 'all') {
             if ($this->viewAttendancePermission == 'owned') {
                 $employees->where('users.id', user()->id);
-            } else {
+            }
+            else {
                 $employees->where('users.id', $id);
             }
-        } elseif ($this->viewAttendancePermission == 'owned') {
+        }
+        else if ($this->viewAttendancePermission == 'owned') {
             $employees->where('users.id', user()->id);
         }
 
@@ -126,7 +132,7 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         }
 
         $employees = $employees->select('users.name', 'users.id')->get();
-        $employeedata = [];
+        $employeedata = array();
         $emp_attendance = 1;
         $employee_index = 0;
 
@@ -134,19 +140,18 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
             $userId = $employee->id;
             $employeedata[$employee_index]['employee_name'] = $employee->name;
 
-            $attendances = Attendance::where('attendances.user_id', '=', $userId)
-                ->orderBy('attendances.clock_in_time', 'asc')
+            $attendances = Attendance::where('attendances.user_id', '=', $userId);
+
+            $attendances = $attendances->orderBy('attendances.clock_in_time', 'asc')
                 ->where(DB::raw('DATE(attendances.clock_in_time)'), '>=', $startDate->format('Y-m-d'))
                 ->where(DB::raw('DATE(attendances.clock_in_time)'), '<=', $endDate->format('Y-m-d'))
-                ->select('attendances.clock_in_time as date', 'attendances.clock_in_time', 'attendances.working_from', 'attendances.location_id', 'attendances.clock_out_time', 'attendances.late', 'attendances.half_day', 'attendances.auto_clock_out', 'attendances.half_day_type')
-                ->get();
+                ->select('attendances.clock_in_time as date', 'attendances.clock_in_time', 'attendances.working_from', 'attendances.location_id', 'attendances.clock_out_time', 'attendances.late', 'attendances.half_day', 'attendances.auto_clock_out', 'attendances.half_day_type')->get();
 
             $leavesDates = Leave::where('user_id', $userId)
                 ->where('leave_date', '>=', $startDate)
                 ->where('leave_date', '<=', $endDate)
                 ->where('status', 'approved')
-                ->select('leave_date', 'reason', 'duration')
-                ->get();
+                ->select('leave_date', 'reason', 'duration')->get();
 
             $employeeShifts = EmployeeShiftSchedule::with('shift')
                 ->where('user_id', $userId)
@@ -154,14 +159,15 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                 ->where('date', '<=', $endDate)
                 ->get();
 
-            $period = CarbonPeriod::create($startDate, $endDate);
-            $holidays = Holiday::getHolidayByDates($startDate, $endDate, $userId);
+            $period = CarbonPeriod::create($startDate, $endDate); // Get All Dates from start to end date
+            $holidays = Holiday::getHolidayByDates($startDate, $endDate, $userId); // Getting Holiday Data
 
             $attendances = collect($attendances)->each(function ($item) {
                 $item->status = '';
                 $item->occassion = '';
             });
 
+            // Add New Collection if date does not match with attendance collection...
             foreach ($period->toArray() as $date) {
                 $att = new Attendance();
                 $att->date = $date->format('Y-m-d');
@@ -174,55 +180,72 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                 $att->location_id = null;
 
                 if ($date->lessThan(now()) && !$attendances->whereBetween('clock_in_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])->count()) {
+
                     $att->status = 'Absent';
-                    foreach ($leavesDates as $leave) {
+                    // If date is not in attendance..
+                    foreach ($leavesDates as $leave) { // check leaves
                         if ($date->equalTo($leave->leave_date)) {
                             $att->status = 'Leave';
                         }
                     }
-                    foreach ($holidays as $holiday) {
+
+                    foreach ($holidays as $holiday) { // Check holidays
                         if (\Carbon\Carbon::createFromFormat('Y-m-d', $holiday->holiday_date)->startOfDay()->equalTo($date)) {
                             $att->status = 'Holiday';
                             $att->occassion = $holiday->occassion;
                         }
                     }
-                    foreach ($employeeShifts as $shift) {
+
+                    foreach ($employeeShifts as $shift) { // Check shifts
                         if ($date->equalTo($shift->date) && $shift->shift->shift_name == 'Day Off') {
                             $att->status = $shift->shift->shift_name;
                         }
                     }
+
                     $attendances->push($att);
-                } elseif ($date->lessThan(now())) {
-                    foreach ($leavesDates as $leave) {
+
+                }
+                else if ($date->lessThan(now())) {
+                    // else date present in attendance then check for holiday and leave
+                    foreach ($leavesDates as $leave) { // check employee leaves
+
                         if ($date->equalTo($leave->leave_date)) {
                             $att->status = 'Leave';
                             $attendances->push($att);
                         }
                     }
-                    foreach ($holidays as $holiday) {
+
+                    foreach ($holidays as $holiday) { // Check holidays
+
                         if ($date->format('Y-m-d') == $holiday->holiday_date && !$attendances->whereBetween('clock_in_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])->count()) {
                             $att->status = 'Holiday';
                             $att->occassion = $holiday->occassion;
                             $attendances->push($att);
-                        } elseif ($date->format('Y-m-d') == $holiday->holiday_date && $attendances->whereBetween('clock_in_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])->count()) {
+                        }
+                        else if ($date->format('Y-m-d') == $holiday->holiday_date && $attendances->whereBetween('clock_in_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])->count()) {
+                            // here modify the collection property not creating new
                             $this->checkHolidays($attendances, $date);
                         }
+
                     }
-                    foreach ($employeeShifts as $shift) {
+
+                    foreach ($employeeShifts as $shift) { // Check shifts
                         if ($date->equalTo($shift->date) && $shift->shift->shift_name == 'Day Off') {
                             $att->status = $shift->shift->shift_name;
                             $attendances->push($att);
                         }
                     }
+
                 }
             }
 
-            $employee_temp = [];
+            $employee_temp = array();
             $status = __('app.present');
-            $totalLeaves = 0;
 
             foreach ($attendances->sortBy('date') as $attendance) {
+
                 $date = Carbon::createFromFormat('Y-m-d H:i:s', $attendance->date)->timezone(company()->timezone)->format(company()->date_format);
+
                 $to = $attendance->clock_out_time ? \Carbon\Carbon::parse($attendance->clock_out_time) : null;
                 $from = $attendance->clock_in_time ? \Carbon\Carbon::parse($attendance->clock_in_time) : null;
 
@@ -233,59 +256,71 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                 $clock_in = $attendance->clock_in_time ? Carbon::createFromFormat('Y-m-d H:i:s', $attendance->clock_in_time)->timezone(company()->timezone)->format(company()->time_format) : 0;
                 $clock_out = $attendance->clock_out_time ? Carbon::createFromFormat('Y-m-d H:i:s', $attendance->clock_out_time)->timezone(company()->timezone)->format(company()->time_format) : 0;
 
-                if ($clock_out != 0 && $attendance->auto_clock_out == 1) {
+                if($clock_out != 0 && $attendance->auto_clock_out == 1) {
                     $clock_out .= ' ' . __('Modules.attendance.autoClockOut');
                 }
 
                 $diff_in_hours = ($to && $from) ? $to->diffInMinutes($from) : 0;
 
                 if ($attendance->status != null) {
+
                     if ($attendance->status == 'Absent') {
                         $status = __('app.absent');
-                        $totalLeaves++;
-                    } elseif ($attendance->status == 'Leave') {
+                    }
+                    else if ($attendance->status == 'Leave') {
                         $status = __('app.onLeave');
-                        $totalLeaves++;
-                    } elseif ($attendance->status == 'Day Off') {
+                    }
+                    else if ($attendance->status == 'Day Off') {
                         $status = __('modules.attendance.dayOff');
-                    } elseif ($attendance->status == 'Holiday') {
+                    }
+                    else if ($attendance->status == 'Holiday') {
                         $status = __('app.holiday', ['name' => $attendance->occassion]);
                     }
-                } elseif ($attendance->late == 'yes' && $attendance->half_day == 'yes') {
+                }
+                else if ($attendance->late == 'yes' && $attendance->half_day == 'yes') {
                     $halfDayType = '';
+
                     if ($attendance->half_day_type == 'first_half') {
                         $halfDayType = '('. __('modules.leaves.1stHalf') .')';
                     } elseif ($attendance->half_day_type == 'second_half') {
                         $halfDayType = '('. __('modules.leaves.2ndHalf') .')';
                     }
-                    $status = __('app.halfday') . $halfDayType . __('app.lateHalfday');
-                } elseif ($attendance->late == 'yes') {
+
+                    $status =  __('app.halfday') . $halfDayType . __('app.lateHalfday');
+                }
+                else if ($attendance->late == 'yes') {
                     $status = __('app.presentlate');
-                } elseif ($attendance->half_day == 'yes') {
+                }
+                else if ($attendance->half_day == 'yes') {
                     $halfDayType = '';
+
                     if ($attendance->half_day_type == 'first_half') {
                         $halfDayType = '('. __('modules.leaves.1stHalf') .')';
                     } elseif ($attendance->half_day_type == 'second_half') {
                         $halfDayType = '('. __('modules.leaves.2ndHalf') .')';
                     }
+
                     $status = __('app.halfday') . $halfDayType;
-                } else {
+                }
+                else {
                     $status = 'Present';
                 }
 
                 $workFrom = $attendance->working_from ?? '--';
                 $companyAddress = CompanyAddress::where('id', $attendance->location_id)->first();
                 $location = '-';
-                if ($companyAddress) {
+                if($companyAddress){
                     $location = $companyAddress->location;
                 }
 
                 if ($employee_temp && $employee_temp[1] == $date) {
                     $employeedata[$employee_index]['dates'][$emp_attendance - 1]['comments']['clock_in'] .= ' Clock In : ' . $clock_in . ' Clock Out : ' . $clock_out . ' Work From : ' . $workFrom . ' location : ' . $location;
                     $employeedata[$employee_index]['dates'][$emp_attendance - 1]['total_hours'] = $employeedata[$employee_index]['dates'][$emp_attendance - 1]['total_hours'] + $diff_in_hours;
-                } else {
+                }
+                else {
                     $employeedata[$employee_index]['dates'][$emp_attendance] = [
                         'total_hours' => $diff_in_hours,
+                        // 'total_hours' => "present",
                         'date' => $attendance->date,
                         'comments' => [
                             'status' => $status,
@@ -298,7 +333,6 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
                 $employee_temp = [$emp_attendance, $date];
             }
 
-            $employeedata[$employee_index]['total_leaves'] = $totalLeaves;
             $employee_index++;
             $emp_attendance = 1;
         }
@@ -309,121 +343,55 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         return $employeedata;
     }
 
+
+    // new code
+    public function map($employeedata): array
+    {
+        $data = array();
+        $data[] = $employeedata['employee_name'];
+        $num = isset($employeedata['dates']) ? count($employeedata['dates']) : 0;
+
+        for ($index = 1; $index <= $num; $index++) {
+            $emp_status = $employeedata['dates'][$index]['comments']['status'];
+            // echo "employee status  $emp_status";
+
+            // Check if the employee is present
+            if (str_contains($emp_status, 'Present')) {
+                $data[] = 'Present'; // Display "Present" instead of total hours
+            } else if (str_contains($emp_status, 'Holiday') || $employeedata['dates'][$index]['total_hours'] < 1) {
+                $data[] = $employeedata['dates'][$index]['comments']['status'];
+            } else {
+                $data[] = CarbonInterval::formatHuman($employeedata['dates'][$index]['total_hours']);
+            }
+        }
+
+        return $data;
+    } 
+    // end new code
+
+
+    
+
     // public function map($employeedata): array
     // {
-    //     $data = [];
+    //     $data = array();
     //     $data[] = $employeedata['employee_name'];
+    //     $num = isset($employeedata['dates']) ? count($employeedata['dates']) : 0;
 
-    //     $period = CarbonPeriod::create($this->startdate, $this->enddate);
-    //     $totalDays = $period->count();
+    //     for ($index = 1; $index <= $num; $index++) {
 
-    //     foreach ($period as $date) {
-    //         $dateStr = $date->format('Y-m-d');
-    //         $found = false;
+    //         $emp_status = $employeedata['dates'][$index]['comments']['status'];
 
-    //         if (isset($employeedata['dates']) && is_array($employeedata['dates'])) {
-    //             foreach ($employeedata['dates'] as $index => $attendance) {
-    //                 if (isset($attendance['date']) && Carbon::parse($attendance['date'])->format('Y-m-d') === $dateStr) {
-    //                     $emp_status = $attendance['comments']['status'];
-    //                     if (str_contains($emp_status, 'Present')) {
-    //                         $data[] = 'Present';
-    //                     } elseif (str_contains($emp_status, 'Holiday') || $attendance['total_hours'] < 1) {
-    //                         $data[] = $emp_status;
-    //                     } else {
-    //                         $data[] = CarbonInterval::formatHuman($attendance['total_hours']);
-    //                     }
-    //                     $found = true;
-    //                     break;
-    //                 }
-    //             }
+    //         if (str_contains($emp_status, 'Holiday') || $employeedata['dates'][$index]['total_hours'] < 1) {
+    //             $data[] = $employeedata['dates'][$index]['comments']['status'];
     //         }
-
-    //         if (!$found) {
-    //             $data[] = 'Absent';
+    //         else {
+    //             $data[] = CarbonInterval::formatHuman($employeedata['dates'][$index]['total_hours']);
     //         }
     //     }
 
-    //     $totalLeaves = $employeedata['total_leaves'] ?? 0;
-    //     $presentDays = $totalDays - $totalLeaves;
-    //     $data[] = "$presentDays / $totalDays";
-
     //     return $data;
     // }
-
-
-
-    public function map($employeedata): array
-    {
-        $data = [];
-        $data[] = $employeedata['employee_name'];
-
-        $period = CarbonPeriod::create($this->startdate, $this->enddate);
-        $totalDays = $period->count();
-        
-        $presentCount = 0;
-        $holidayCount = 0;
-        $leaveCount = 0;
-        $dayOffCount = 0;
-        $halfDayCount = 0;
-
-        foreach ($period as $date) {
-            $dateStr = $date->format('Y-m-d');
-            $found = false;
-            $isFuture = $date->isFuture();
-
-            if (isset($employeedata['dates'])) {
-                foreach ($employeedata['dates'] as $attendance) {
-                    if (isset($attendance['date']) && Carbon::parse($attendance['date'])->format('Y-m-d') === $dateStr) {
-                        $emp_status = $attendance['comments']['status'];
-                        
-                        if (str_contains($emp_status, 'Present')) {
-                            $data[] = 'Present';
-                            $presentCount++;
-                        }
-                        elseif (str_contains($emp_status, 'Holiday')) {
-                            $data[] = $emp_status;
-                            
-                            if (!$isFuture) {
-                                $holidayCount++;
-                            }
-                        }
-                        elseif (str_contains($emp_status, 'Leave')) {
-                            $data[] = $emp_status;
-                            $leaveCount++;
-                        }
-                        elseif (str_contains($emp_status, 'Day Off')) {
-                            $data[] = $emp_status;
-                            $dayOffCount++;
-                        }
-                        elseif (str_contains($emp_status, 'Halfday')) {
-                            $data[] = $emp_status;
-                            $halfDayCount += 0.5; 
-                        }
-                        elseif ($attendance['total_hours'] < 1) {
-                            $data[] = $emp_status;
-                        }
-                        else {
-                            $data[] = CarbonInterval::formatHuman($attendance['total_hours']);
-                            $presentCount++;
-                        }
-                        $found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$found) {
-                $data[] = 'Absent';
-            }
-        }
-
-        $totalPresent = $presentCount + $holidayCount;
-        $data[] = "$totalPresent / $totalDays";
-
-        return $data;
-        }
-
-
 
 
     public function checkHolidays($attendances, $date)
@@ -437,10 +405,13 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     private function getDefaultClockOutTime($date, $attendanceSettings)
     {
+
         if ($attendanceSettings) {
             $attendanceSettings = $attendanceSettings->shift;
-        } else {
-            $attendanceSettings = AttendanceSetting::first()->shift;
+
+        }
+        else {
+            $attendanceSettings = AttendanceSetting::first()->shift; // Do not get this from session here
         }
 
         $defaultClockOutTime = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . $attendanceSettings->office_end_time, $attendanceSettings->company->timezone);
@@ -451,4 +422,5 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
 
         return $defaultClockOutTime;
     }
+
 }

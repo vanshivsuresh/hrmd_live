@@ -1,4 +1,11 @@
 @component('mail::message')
+
+@slot('header')
+        @component('mail::header', ['url' => $url])
+            <img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name') }}" style="height: 60px;">
+        @endcomponent
+@endslot
+
 # @lang('email.hello')@if(!empty($notifiableName)){{ ' '.$notifiableName }}@endif!
 
 @if (!empty($content))

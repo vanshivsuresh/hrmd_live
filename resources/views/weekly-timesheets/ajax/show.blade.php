@@ -79,7 +79,11 @@
                                 @endphp
                                 <td class="p-2 date-index-{{ $key2 }}" data-index="{{ $key2 }}">
                                     {{ $entry->hours }} @lang('app.hrs')
+                                    <div class="text-muted f-12 mt-1">{{ $entry->memo }}</div>
                                 </td>
+
+                                
+
                             @endforeach
                         </tr>
                         @endforeach
