@@ -186,6 +186,7 @@
 @push('scripts')
 
     <script>
+
         function initStickyThead() {
             const table = document.getElementById('example');
             if (!table) return;
@@ -193,18 +194,18 @@
             const thead = table.querySelector('thead');
             if (!thead) return;
 
-            window.addEventListener('scroll', function () {
-                const tableRect = table.getBoundingClientRect();
-                if (tableRect.top <= 0 && tableRect.bottom > thead.offsetHeight) {
-                    thead.style.position = 'fixed';
-                    thead.style.top = '108';
-                    thead.style.width = table.offsetWidth + 'px';
-                } else {
-                    thead.style.position = '';
-                    thead.style.top = '';
-                    thead.style.width = '';
-                }
-            });
+            // window.addEventListener('scroll', function () {
+            //     const tableRect = table.getBoundingClientRect();
+            //     if (tableRect.top <= 0 && tableRect.bottom > thead.offsetHeight) {
+            //         thead.style.position = 'fixed';
+            //         thead.style.top = '108';
+            //         thead.style.width = table.offsetWidth + 'px';
+            //     } else {
+            //         thead.style.position = '';
+            //         thead.style.top = '';
+            //         thead.style.width = '';
+            //     }
+            // });
         }
 
         // Option 1: Call manually after AJAX
@@ -253,7 +254,7 @@
             $('#filter-form')[0].reset();
             $('.filter-box .select-picker').selectpicker("refresh");
             $('#reset-filters').addClass('d-none');
-            showTable();
+            showTable(); 
         });
 
         function showTable(loading = true) {
